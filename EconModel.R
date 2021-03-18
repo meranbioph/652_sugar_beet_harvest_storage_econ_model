@@ -1,16 +1,61 @@
 ########################################
 #
 # Swedish sugar beets economic model
-#
+# Will English, 2021-03-18
 # FIXES: Date in Summary Table. Per truck, per ha into the payment schedule.
 #
 ########################################
 
-library(shiny)
-library(plotly)
-library(sets)
-library(ggplot2)
-#library(shinyWidgets)
+# -------------------------------------------
+snapshot_date = "2021-03-18"
+options("repos" = paste0("https://mran.revolutionanalytics.com/snapshot/", snapshot_date))
+# -------------------------------------------
+
+# -------------------------------------------
+# sink options
+options(width = 150)
+# rJava memory option
+options(java.parameters = "-Xmx8000m")
+# -------------------------------------------
+
+# R packages
+# -------------------------------------------
+Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", "ggplot2_3.3.3")
+path_Rpackages = "C:/R packages_404"
+# -------------------------------------------
+
+# -------------------------------------------
+sessionInfo()
+# -------------------------------------------
+
+# version check and load packages
+# -------------------------------------------
+# R version check
+if(sessionInfo()$R.version$version.string != "R version 4.0.4 (2021-02-15)") stop("R.version must be 4.0.4 (2021-02-15)")
+
+# install packages
+Rpack = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[1])
+Rpack_version = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[2])
+if(!all(Rpack %in% list.files(path_Rpackages))){
+  loadRpackages <- Rpack[!Rpack %in% list.files(path_Rpackages)]
+  for(i in loadRpackages) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+}
+
+# load packages
+for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
+
+# Version check
+loadedPackagesAndVersions = sapply(sessionInfo()$otherPkgs, FUN = function(x) paste(x$Package, x$Version, sep = "_"))
+Rpack = Rpack[!Rpackages_version %in% loadedPackagesAndVersions]
+if(length(Rpack) > 0){
+  for(i in rev(Rpack)) try(eval(parse(text = paste0("detach('package:", i, "', unload = T)"))), silent = T)
+  for(i in Rpack) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+  for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
+}
+
+# -------------------------------------------
+# THE MODEL
+# -------------------------------------------
 
 # Model coefficients
 ## Prices per tonne
