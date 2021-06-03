@@ -6,58 +6,78 @@
 #
 ########################################
 
-# -------------------------------------------
-snapshot_date = "2021-03-18"
-options("repos" = paste0("https://mran.revolutionanalytics.com/snapshot/", snapshot_date))
-# -------------------------------------------
 
-# -------------------------------------------
-# sink options
-options(width = 150)
-# rJava memory option
-options(java.parameters = "-Xmx8000m")
-# -------------------------------------------
+###############################################
+#
+# Setup
+#
+###############################################
 
-# R packages
-# -------------------------------------------
-Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", "ggplot2_3.3.3")
-path_Rpackages = "C:/R packages_404"
-# -------------------------------------------
+{
+ # -------------------------------------------
+ snapshot_date = "2021-03-18"
+ options("repos" = paste0("https://mran.revolutionanalytics.com/snapshot/", snapshot_date))
+ # -------------------------------------------
 
-# -------------------------------------------
-sessionInfo()
-# -------------------------------------------
+ # -------------------------------------------
+ # sink options
+ options(width = 150)
+ # rJava memory option
+ options(java.parameters = "-Xmx8000m")
+ # -------------------------------------------
 
-# version check and load packages
-# -------------------------------------------
-# R version check
-if(sessionInfo()$R.version$version.string != "R version 4.0.4 (2021-02-15)") stop("R.version must be 4.0.4 (2021-02-15)")
+ # R packages
+ # -------------------------------------------
+ Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", 
+                       "ggplot2_3.3.3", "reshape2_1.4.4")
+ path_Rpackages = "C:/R packages_404"
+ # -------------------------------------------
+ 
+ # -------------------------------------------
+ sessionInfo()
+ # -------------------------------------------
 
-# install packages
-Rpack = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[1])
-Rpack_version = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[2])
-if(!all(Rpack %in% list.files(path_Rpackages))){
-  loadRpackages <- Rpack[!Rpack %in% list.files(path_Rpackages)]
-  for(i in loadRpackages) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+ # version check and load packages
+ # -------------------------------------------
+ # R version check
+ if(sessionInfo()$R.version$version.string != "R version 4.0.4 (2021-02-15)") stop("R.version must be 4.0.4 (2021-02-15)")
+
+ # install packages
+ Rpack = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[1])
+ Rpack_version = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[2])
+ if(!all(Rpack %in% list.files(path_Rpackages))){
+   loadRpackages <- Rpack[!Rpack %in% list.files(path_Rpackages)]
+   for(i in loadRpackages) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+ }
+
+ # load packages
+ for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
+
+ # Version check
+ loadedPackagesAndVersions = sapply(sessionInfo()$otherPkgs, FUN = function(x) paste(x$Package, x$Version, sep = "_"))
+ Rpack = Rpack[!Rpackages_version %in% loadedPackagesAndVersions]
+ if(length(Rpack) > 0){
+   for(i in rev(Rpack)) try(eval(parse(text = paste0("detach('package:", i, "', unload = T)"))), silent = T)
+   for(i in Rpack) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+   for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
+ }
 }
-
-# load packages
-for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
-
-# Version check
-loadedPackagesAndVersions = sapply(sessionInfo()$otherPkgs, FUN = function(x) paste(x$Package, x$Version, sep = "_"))
-Rpack = Rpack[!Rpackages_version %in% loadedPackagesAndVersions]
-if(length(Rpack) > 0){
-  for(i in rev(Rpack)) try(eval(parse(text = paste0("detach('package:", i, "', unload = T)"))), silent = T)
-  for(i in Rpack) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
-  for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
-}
-
-# -------------------------------------------
+ 
+###############################################
+# ---------------------------------------------
 # THE MODEL
-# -------------------------------------------
+# ---------------------------------------------
+###############################################
 
+###############################################
+#
 # Model coefficients
+#
+# Building the model components, 
+#  framework and base data
+#
+###############################################
+
 ## Prices per tonne
 kr_tonne <- 275 # at reference pol of 17%
 kr_renhet <- 2 # extra kr per %-point over ref, at 17% pol%
@@ -72,7 +92,7 @@ pris_TT <- c(rep(0,66),rep(5,8), rep(10,8), rep(15,90))
 pris_vol <- rep(0,172)
 kr_tab <- data.frame(date_full,pris_early, pris_late, pris_TT, pris_vol)
 
-## References
+## Reference values
 ref_hardness <- 50
 ref_pol <- 0.17
 ref_renhet <- 0.895
@@ -83,21 +103,54 @@ ref_early <- as.POSIXct("2020-09-30", tz = "UTC", format = "%Y-%m-%d") # last da
 ref_late_1 <- as.POSIXct("2020-12-01", tz = "UTC", format = "%Y-%m-%d") #first day you get money for late delivery
 ref_late_2 <- as.POSIXct("2021-01-01", tz = "UTC", format = "%Y-%m-%d") #first day you get 1.5 x money for late delivery
 ref_Cd <- seq(1:500)
-ref_medel <- (ref_Cd*0.000128 + 0.0000002*ref_Cd^2)*100
-ref_loss_data <- data.frame(ref_Cd,ref_medel)
+ref_medel_linear <- ref_Cd*0.0188
+ref_medel_discont <- ifelse(ref_Cd <= 270, ref_Cd*0.013, 270*0.013+(ref_Cd-270)*0.042)
+ref_medel_quad <- (ref_Cd*-0.0043 + 0.000064*ref_Cd^2)
+ref_loss_data <- data.frame(ref_Cd,ref_medel_linear, ref_medel_discont, ref_medel_quad)
 ref_temp <- 5
+
+#ref_models <- melt(ref_loss_data, id = "ref_Cd")
+#ggplot(ref_models, aes(x=ref_Cd, y=value, colour=variable, group=variable)) +
+#  geom_line() + 
+#  xlab("")
 
 first_day <- min(kr_tab$date_full)
 last_day <- max(kr_tab$date_full)
 days_full <- round(as.numeric(difftime(last_day, first_day, units="days")+1))
-actual_temp <- c(10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,2,1,1,2,6,5,6,7,8,10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,5,4,5,6,7,6,5,4,4,4,5,5,5,4,4,3,2,3,3,4,4,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,5,6,7,8,8,8,8,7,6,7,6,5,6,5,4,3,3,2,2)
-if(length(actual_temp) == 0) temp <- rep(ref_temp, days_full) else temp <- actual_temp[1:days_full]
 
+# Create temperature series to test the model on
+## This should be updated with actual temperature series from these years!
+random_16 <- runif(days_full, min =-4, max=4)
+random_17 <- runif(days_full, min =-4, max=3)
+random_18 <- runif(days_full, min =-3, max=4)
+random_19 <- runif(days_full, min =-4, max=4)
+random_20 <- runif(days_full, min =-5, max=3)
+day_drop_1 <- seq(0, length=days_full, by=0.1)
+day_drop_2 <- seq(0, length=days_full, by=0.11)
+#yr2016 <- c(10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,2,1,1,2,6,5,6,7,8,10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,5,4,5,6,7,6,5,4,4,4,5,5,5,4,4,3,2,3,3,4,4,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,5,6,7,8,8,8,8,7,6,7,6,5,6,5,4,3,3,2,2)
+yr2016 <- 15 - random_16 - day_drop_1
+yr2017 <- 16 - random_17 - day_drop_2
+yr2018 <- 15 - random_18 - day_drop_2
+yr2019 <- 14 - random_19 - day_drop_1
+yr2020 <- 15 - random_20 - day_drop_1
+actual_temp <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
+
+temp <- actual_temp[,"yr2018"]
+
+#if(length(actual_temp) == 0) temp <- rep(ref_temp, days_full) else temp <- actual_temp[1:days_full]
+
+# Data frame with all the base price parameters, and temperature
 kr_tab <- data.frame(kr_tab, temp)
 
-#####################################
+###############################################
 #
 # Fuzzy loss model
+#
+# Guessing how much loss relative to 'normal'
+#  the farmer can expect given harvest and 
+#  clamp conditions
+#
+###############################################
 
 sets_options("universe", seq(1, 100, 0.5))
 
@@ -139,7 +192,13 @@ rules <- set(
 
 model <- fuzzy_system(variables, rules)
 
-#####################################
+###############################################
+#
+# Shiny user interface
+#
+# Determining inputs and viewing outputs
+#
+###############################################
 
 ui <- fluidPage(
   #  setBackgroundColor(
@@ -185,13 +244,23 @@ ui <- fluidPage(
                  sidebarPanel(
                    h4("Storage"),
                    sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
-                   dateInput("cover_date", "Date of cover with TopTex", value="2021-01-01")
+                   dateInput("cover_date", "Date of cover with TopTex", value="2021-01-01"),
+                   h4("Loss model"),
+                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3))
                  ),
                  mainPanel(
                    plotly::plotlyOutput("loss_Cd")
                  ),
                  style = 'padding-left:15px'
                )
+               #,
+               #fluidRow(
+              #   sidebarPanel(
+               #    h4("Loss model"),
+              #     selectInput("loss_model","Loss model", choices = list("Linear"=1, "Discontinuous"=2,"Quadratic"=3))
+               #  ),
+              #   style = 'padding-left:15px'
+               #)
              )
     ),
     tabPanel("Delivery and Payment", fluid = T,
@@ -278,6 +347,16 @@ ui <- fluidPage(
   )
 )
 
+# shinyApp(ui=ui, server=server)
+
+
+###############################################
+#
+# Shiny server 
+# 
+# Where the calculations are run
+#
+###############################################
 
 server <- function(input, output, session){
   
@@ -294,8 +373,7 @@ server <- function(input, output, session){
     root_harvest_tab
   })
   
-  # Plot of sugar loss  
-  
+  # Plot of sugar loss
   output$loss_Cd <- plotly::renderPlotly({
     data_clamp_size <- ((input$clamp_size - 7)*50)
     data_late_moisture <- (input$late_moisture * 0.5)
@@ -304,6 +382,10 @@ server <- function(input, output, session){
                                              harvester_cleaning = input$harvester_cleaning, 
                                              late_moisture = data_late_moisture,
                                              variety  = input$variety_hardness))
+    
+    if(input$loss_model == 1) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_discont 
+    if(input$loss_model == 2) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_linear 
+    if(input$loss_model == 3) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_quad
     
     factor <- (gset_defuzzify(example.1, "centroid")/100+0.5)
     ref_loss_data$actual <- ref_loss_data$ref_medel*factor
@@ -666,6 +748,12 @@ server <- function(input, output, session){
   })
   
 }
+
+###############################################
+#
+# Run the model
+#
+###############################################
 
 shinyApp(ui=ui, server=server)
 
