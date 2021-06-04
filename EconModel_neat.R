@@ -78,7 +78,7 @@
 #
 ###############################################
 
-## Prices per tonne
+## CONTRACT = Prices per tonne
 kr_tonne <- 275 # at reference pol of 17%
 kr_renhet <- 2 # extra kr per %-point over ref, at 17% pol%
 kr_pol <- 9 # extra % per %-point over ref of 17% pol
@@ -90,7 +90,7 @@ pris_early <- c(37,37,37,37,37,36,33,30,27,24,21,19,16,14,12,10,8,6,4,2,1,rep(0,
 pris_late <- c(rep(0,82),seq(1,23,by=1),seq(24.5,123.5,by=1.5))
 pris_TT <- c(rep(0,66),rep(5,8), rep(10,8), rep(15,90))
 pris_vol <- rep(0,172)
-kr_tab <- data.frame(date_full,pris_early, pris_late, pris_TT, pris_vol)
+price_tab_contract <- data.frame(date_full,pris_early, pris_late, pris_TT, pris_vol)
 
 ## Reference values
 ref_hardness <- 50
@@ -108,14 +108,8 @@ ref_medel_discont <- ifelse(ref_Cd <= 270, ref_Cd*0.013, 270*0.013+(ref_Cd-270)*
 ref_medel_quad <- (ref_Cd*-0.0043 + 0.000064*ref_Cd^2)
 ref_loss_data <- data.frame(ref_Cd,ref_medel_linear, ref_medel_discont, ref_medel_quad)
 ref_temp <- 5
-
-#ref_models <- melt(ref_loss_data, id = "ref_Cd")
-#ggplot(ref_models, aes(x=ref_Cd, y=value, colour=variable, group=variable)) +
-#  geom_line() + 
-#  xlab("")
-
-first_day <- min(kr_tab$date_full)
-last_day <- max(kr_tab$date_full)
+first_day <- min(price_tab_contract$date_full)
+last_day <- max(price_tab_contract$date_full)
 days_full <- round(as.numeric(difftime(last_day, first_day, units="days")+1))
 
 # Create temperature series to test the model on
@@ -133,10 +127,7 @@ yr2017 <- 16 - random_17 - day_drop_2
 yr2018 <- 15 - random_18 - day_drop_2
 yr2019 <- 14 - random_19 - day_drop_1
 yr2020 <- 15 - random_20 - day_drop_1
-actual_temp <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
-
-# Data frame with all the base price parameters, and temperature
-# kr_tab <- data.frame(kr_tab, temp)
+temp_tab_historical <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
 
 ###############################################
 #
@@ -377,7 +368,7 @@ server <- function(input, output, session){
   })
   
   temp_tab <- reactive({
-    temp_air <- actual_temp[,input$temp_air_yr]
+    temp_air <- temp_tab_historical[,input$temp_air_yr]
     
     ref_temp <- input$ref_temp
     
@@ -481,7 +472,7 @@ server <- function(input, output, session){
   price_tab = reactive({
     temp_tab_p <- temp_tab()
     temp_clamp_p <- temp_tab_p$temp_clamp
-    pris_tab <- rbind(kr_tab, temp_clamp_p)
+    pris_tab <- rbind(price_tab_contract, temp_clamp_p)
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     cover_date <- as.POSIXct(input$cover_date, tz = "UTC", format = "%Y-%m-%d")
@@ -545,6 +536,8 @@ server <- function(input, output, session){
     pris_tab$pris_base_field <- pris_tab$pris_base_ha*field_size
     pris_tab$pris_bonus_field <- pris_tab$pris_bonus_ha*field_size
     pris_tab$pris_field <- pris_tab$pris_ha*field_size
+    
+    
     
     # Summary table data
     summary_tab_show <- c("date_full", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","pris_base_clean","pris_bonus_clean","pris_clean")
@@ -821,7 +814,7 @@ delivery_distance <- 5
 delivery_cost <- 10000
 delivery_loads <- 50
 ref_temp <- 5
-actual_temp <- c(10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,6,5,4,4,4,5,5,5,4,4,3,2,3,3,4,4,5,6,7,8,8,8,8,7,6,7,6,5,6,5,4,3,3,2,2)
+temp_tab_historical <- c(10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,6,5,4,4,4,5,5,5,4,4,3,2,3,3,4,4,5,6,7,8,8,8,8,7,6,7,6,5,6,5,4,3,3,2,2)
 factor <- 1.2
 pol <- 19
 clamp_size <- 8
