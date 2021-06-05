@@ -142,8 +142,6 @@ temp_tab_historical <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
 sets_options("universe", seq(1, 100, 0.5))
 
 variables <- set(
-  clamp_size = fuzzy_partition(varnames = c(seven = 0, seven_ = 15, eight = 35, eight_ = 65, nine = 100),
-                               sd = 10.0),
   variety = fuzzy_partition(varnames = c(hard = 100, normal = 40, soft = 0), 
                             sd = 20.0),
   harvester_cleaning = fuzzy_partition(varnames = c(gentle = 0, medium = 60,
@@ -156,12 +154,9 @@ variables <- set(
 
 
 rules <- set(
-  fuzzy_rule(clamp_size %is% seven && variety %is% hard &&
-               harvester_cleaning %is% gentle && late_moisture %is% perfect, loss_rate %is% v.low),
-  fuzzy_rule(clamp_size %is% eight && variety %is% normal &&
-               harvester_cleaning %is% medium && late_moisture %is% dry, loss_rate %is% medium),
-  fuzzy_rule(clamp_size %is% nine && variety %is% soft &&
-               harvester_cleaning %is% hard && late_moisture %is% wet, loss_rate %is% v.high),
+  fuzzy_rule(variety %is% hard && harvester_cleaning %is% gentle && late_moisture %is% perfect, loss_rate %is% v.low),
+  fuzzy_rule(variety %is% normal && harvester_cleaning %is% medium && late_moisture %is% dry, loss_rate %is% medium),
+  fuzzy_rule(variety %is% soft && harvester_cleaning %is% hard && late_moisture %is% wet, loss_rate %is% v.high),
   fuzzy_rule(harvester_cleaning %is% hard && variety %is% soft, loss_rate %is% v.high),
   fuzzy_rule(harvester_cleaning %is% hard, loss_rate %is% high),
   fuzzy_rule(harvester_cleaning %is% medium, loss_rate %is% medium),
@@ -169,9 +164,6 @@ rules <- set(
   fuzzy_rule(late_moisture %is% wet, loss_rate %is% high),
   fuzzy_rule(late_moisture %is% dry, loss_rate %is% medium),
   fuzzy_rule(late_moisture %is% perfect, loss_rate %is% v.low),
-  fuzzy_rule(clamp_size %is% seven, loss_rate %is% v.low),
-  fuzzy_rule(clamp_size %is% eight, loss_rate %is% low),
-  fuzzy_rule(clamp_size %is% nine, loss_rate %is% high),
   fuzzy_rule(variety %is% hard, loss_rate %is% v.low),
   fuzzy_rule(variety %is% normal, loss_rate %is% medium),
   fuzzy_rule(variety %is% soft, loss_rate %is% v.high)
@@ -223,10 +215,13 @@ ui <- fluidPage(
                    h4("HARVEST"),
                    dateInput("harvest_date","Harvest date",value = "2021-11-15"),
                    sliderInput("late_moisture", "Moisture late in the season, as percent of ideal", min=0, max=200, value=100),
-                   sliderInput("harvester_cleaning", "Rotor speed", min=0, max=100, value=40)
+                   sliderInput("harvester_cleaning", "Rotor speed", min=0, max=100, value=40),
+                   h4("Loss model"),
+                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3))
+                   
                  ),
                  mainPanel(
-                   plotly::plotlyOutput("temp_graph")
+                   plotly::plotlyOutput("loss_Cd")
                  ),
                  style = 'padding-left:15px'
                ),
@@ -238,12 +233,10 @@ ui <- fluidPage(
                    h4("Temperature model"),
                    selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
                    selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3)),
-                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5),
-                   h4("Loss model"),
-                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3))
-                 ),
+                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5)
+                   ),
                  mainPanel(
-                   plotly::plotlyOutput("loss_Cd")
+                   plotly::plotlyOutput("temp_graph")
                  ),
                  style = 'padding-left:15px'
                )
@@ -356,78 +349,94 @@ server <- function(input, output, session){
   
   # Update hardness slider
   
-  observe(updateSliderInput(session, "variety_hardness", value = ifelse(input$variety_type == 1, 30, ifelse(input$variety_type == 2, 50, 70))))
+  observe(updateSliderInput(session, "variety_hardness", 
+                            value = ifelse(input$variety_type == 1, 30, ifelse(input$variety_type == 2, 50, 70))))
   
   # Root harvest yield table 
   
-  output$root_harvest_tab <- renderTable({
+  root_harvest_tab <- reactive({
     root_harvest <- input$root_yield * input$field_size
     root_harvest_tab <- matrix(c(root_harvest), byrow=F, nrow=1) 
     colnames(root_harvest_tab) <- c("Root harvest (tonne)")
     root_harvest_tab
   })
   
+  output$root_harvest_tab <- renderTable({
+    root_harvest_tab()
+  })
+  
+  # TEMP TABLE. Table of daily temperature given the chosen inputs
+  
   temp_tab <- reactive({
+    # Air temp for given period taken from contant table
     temp_air <- temp_tab_historical[,input$temp_air_yr]
     
-    ref_temp <- input$ref_temp
+    # The minimum temperature the clamp can be
+    temp_ref <- input$ref_temp
     
+    # The clamp_temp = f(air_temp) model chosen
     temp_clamp_model <- input$temp_clamp_model
     
+    # Clamp size
+    temp_clamp_size <- (input$clamp_size - 7)/20+1
+    
+    # Implementation of clamp_temp = f(air_temp) model (Add new versions here and to input$temp_clamp model)
     ## basic => 3 day weighted lag, and min temp = ref temp.
     if(temp_clamp_model == 1){
       temp_clamp <- temp_air
+      temp_clamp <- temp_clamp * temp_clamp_size
       temp_clamp <- WMA(temp_clamp,n=3,wts=c(0.2,0.3,0.5))
       temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-(1:2)])
-      temp_clamp <- replace(temp_clamp, temp_clamp < ref_temp, ref_temp)
+      temp_clamp <- replace(temp_clamp, temp_clamp < temp_ref, temp_ref)
     }
     ## min_ref => min temp = ref_temp
     if(temp_clamp_model == 2){
       temp_clamp <- temp_air
-      temp_clamp <- replace(temp_clamp, temp_clamp < ref_temp, ref_temp)
+      temp_clamp <- temp_clamp * temp_clamp_size
+      temp_clamp <- replace(temp_clamp, temp_clamp < temp_ref, temp_ref)
     }
     ## air => clamp temp = air temp
     if(temp_clamp_model == 3){
       temp_clamp <- temp_air
+      temp_clamp <- temp_clamp * temp_clamp_size
     }
     
+    # Full table of daily temperatures compilation
     temp_tab <- data.frame(date_full, temp_air, temp_clamp)
     
+    # Make the full table the output
     temp_tab
   })
   
-  # Plot of temperatures
-  output$temp_graph <- plotly::renderPlotly({
-    
-    ggplot(temp_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = temp_clamp), color = "darkred") + 
-      geom_line(aes(y = temp_air), color="steelblue", linetype="twodash") +
-      ylab("Temperature (C)") + 
-      xlab("Date")
-  })
-  
-  # Plot of sugar loss
-  output$loss_Cd <- plotly::renderPlotly({
-    data_clamp_size <- ((input$clamp_size - 7)*50)
+  # LOSS FACTOR
+  # Get model factor
+  factor <- reactive({
     data_late_moisture <- (input$late_moisture * 0.5)
     
-    example.1 <- fuzzy_inference(model, list(clamp_size = data_clamp_size, 
-                                             harvester_cleaning = input$harvester_cleaning, 
-                                             late_moisture = data_late_moisture,
-                                             variety  = input$variety_hardness))
+    example.1 <- fuzzy_inference(model, list(harvester_cleaning = input$harvester_cleaning, 
+                                           late_moisture = data_late_moisture,
+                                           variety  = input$variety_hardness))
+    # get the "damage factor"
+    factor <- (gset_defuzzify(example.1, "centroid")/100+0.5)
     
+    factor
+  })
+  
+  # LOSS MODEL TABLE
+  
+  loss_tab <- reactive({
+ 
+    # Write ref_medel series
     if(input$loss_model == 1) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_discont 
     if(input$loss_model == 2) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_linear 
     if(input$loss_model == 3) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_quad
+
     
-    factor <- (gset_defuzzify(example.1, "centroid")/100+0.5)
-    ref_loss_data$actual <- ref_loss_data$ref_medel*factor
+    # Write actual loss rate as function of "damage factor"
+    ref_loss_data$actual <- ref_loss_data$ref_medel*factor()
     
-    ggplot(ref_loss_data, aes(x=ref_Cd)) + 
-      geom_line(aes(y = actual), color = "darkred") + 
-      geom_line(aes(y = ref_medel), color="steelblue", linetype="twodash") +
-      ylab("Sugar loss (%)") + 
-      xlab("Accumulated temperature (Cd)")
+    #Write table
+    ref_loss_data
   })
   
   # Delivery cost table
@@ -467,10 +476,12 @@ server <- function(input, output, session){
   summary_graph_price_delivered = reactiveVal()
   comp_1_tab <- reactiveValues(data = NULL)
   comp_2_tab <- reactiveValues(data = NULL)
-  para_tab_factor <- reactiveVal()
+  #para_tab_factor <- reactiveVal()
     
   price_tab = reactive({
     temp_tab_p <- temp_tab()
+    loss_tab_p <- loss_tab()
+    root_harvest_tab_p <- root_harvest_tab()
     temp_clamp_p <- temp_tab_p$temp_clamp
     pris_tab <- rbind(price_tab_contract, temp_clamp_p)
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
@@ -481,21 +492,9 @@ server <- function(input, output, session){
     pol <- input$pol
     root_yield <- input$root_yield
     vol <- input$vol
-    root_yield <- input$root_yield
-    field_size <- input$field_size
-    root_harvest <- root_yield*field_size
     summary_tab_show_input <- input$summary_tab_show
     
-    data_clamp_size <- ((input$clamp_size - 7)*50)
-    data_late_moisture <- (input$late_moisture * 0.5)
-    example.1 <- fuzzy_inference(model, list(clamp_size = data_clamp_size, 
-                                             harvester_cleaning = input$harvester_cleaning, 
-                                             late_moisture = data_late_moisture,
-                                             variety  = input$variety_hardness))
-    factor <- (gset_defuzzify(example.1, "centroid")/100+0.5)
-    para_tab_factor(
-      factor*0.018
-    )
+    para_tab_factor <- factor()*0.018
     
     days_h_s <- round(as.numeric(difftime(delivery_date, harvest_date, units="days")+1))
     days_p_h <- round(as.numeric(difftime(last_day, harvest_date, units="days")+1))
@@ -651,6 +650,29 @@ server <- function(input, output, session){
           
     price_tab
     
+  })
+  
+  ###############
+  # VISUALS
+  
+  # Plot of temperatures (Air and Clamp)
+  output$temp_graph <- plotly::renderPlotly({
+    
+    ggplot(temp_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = temp_clamp), color = "darkred") + 
+      geom_line(aes(y = temp_air), color="steelblue", linetype="twodash") +
+      ylab("Temperature (C)") + 
+      xlab("Date")
+  })
+  
+  # Plot of sugar loss
+  output$loss_Cd <- plotly::renderPlotly({
+    
+    ggplot(loss_tab(), aes(x=ref_Cd)) + 
+      geom_line(aes(y = actual), color = "darkred") + 
+      geom_line(aes(y = ref_medel), color="steelblue", linetype="twodash") +
+      ylab("Sugar loss (%)") + 
+      xlab("Accumulated temperature (Cd)")
   })
   
   para_tab = reactive({
