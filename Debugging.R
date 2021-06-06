@@ -210,21 +210,24 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield, field_s
   summary_tab <- summary_tab[which(summary_tab$date_full >= harvest_date),]
   summary_tab <- summary_tab[which(summary_tab$date_full <= last_day),]
   
-  summary_tab_names <- c("Date", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
-  if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
-  if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
-  if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
-  colnames(summary_tab) <- summary_tab_names
-  
   # Extract a little info from summary table for later graphing
-  cum_loss_delivery <- summary_tab$cum_temp[summary_tab$date_full==delivery_date]
+  cum_loss_delivery <<- summary_tab$cum_temp[summary_tab$date_full==delivery_date]
   loss_max <- max(summary_tab$cum_percent_loss)
   pol_max <- max(summary_tab$cum_sug)
   pol_min <- min(summary_tab$cum_sug)
   pol_diff <- pol_max - pol_min
   amplify_factor <- 0.5
-  amplify <- loss_max/pol_diff*amplify_factor
-  move <- pol_max*amplify - loss_max*0.85
+  amplify <<- loss_max/pol_diff*amplify_factor
+  move <<- pol_max*amplify - loss_max*0.85
+
+# Summary Table Output  
+  summary_tab_output <- summary_tab
+  
+  summary_tab_names <- c("Date", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
+  if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
+  if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
+  if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
+  colnames(summary_tab_output) <- summary_tab_names
   
 # Summary Table of the bottom line
   summary_final_tab <- data.frame(price_tab)
@@ -241,29 +244,24 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield, field_s
 # VISUALS
 
 # Plot of temperatures (Air and Clamp)
-output$temp_graph <- plotly::renderPlotly({
-  
-  ggplot(temp_tab(), aes(x=date_full)) + 
+  ggplot(temp_tab, aes(x=date_full)) + 
     geom_line(aes(y = temp_clamp), color = "darkred") + 
     geom_line(aes(y = temp_air), color="steelblue", linetype="twodash") +
     ylab("Temperature (C)") + 
     xlab("Date")
-})
 
 # Plot of sugar loss
-output$loss_Cd <- plotly::renderPlotly({
-  
-  ggplot(loss_tab(), aes(x=cum_temp)) + 
+  ggplot(loss_tab, aes(x=cum_temp)) + 
     geom_line(aes(y = actual), color = "darkred") + 
     geom_line(aes(y = ref_medel), color="steelblue", linetype="twodash") +
+    xlim(0,500) +
+    ylim(0,15) +
     ylab("Sugar loss (%)") + 
     xlab("Accumulated temperature (Cd)")
-})
 
-
-summary_graph_temp <- plotly::renderPlotly({
-  ggplot(summary_tab()) + 
-    geom_line(aes(x=date_full, y=cum_temp, color = "Cum. temperature")) + 
+# Plot of cumulative temperature
+  ggplot(summary_tab, aes(x=date_full)) + 
+    geom_line(aes(y=cum_temp)) +
     geom_vline(xintercept = as.POSIXct(delivery_date), linetype="dotted") +
     geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
     scale_colour_manual("", 
@@ -273,10 +271,9 @@ summary_graph_temp <- plotly::renderPlotly({
     xlab("Date") +
     labs(title = "Temperature") + 
     theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-})
 
 summary_graph_loss <- plotly::renderPlotly({
-  ggplot(summary_tab(), aes(x=date_full)) + 
+  ggplot(summary_tab, aes(x=date_full)) + 
     geom_line(aes(y = cum_percent_loss, color = "Cum. % loss")) + 
     geom_line(aes(y = cum_sug * amplify - move, color = "Pol")) +
     geom_vline(xintercept = as.POSIXct(delivery_date)) +

@@ -291,7 +291,7 @@ ui <- fluidPage(
                column(6,)
             ),
              fluidRow(
-               column(12,tableOutput("summary_tab"))
+               column(12,tableOutput("summary_tab_output"))
              )
     ),
     tabPanel("Summary graphs", fluid = T,
@@ -485,6 +485,7 @@ server <- function(input, output, session){
     pol <- input$pol
     root_yield <- input$root_yield
     vol <- input$vol
+    field_size <- input$field_size
     
     # calculate a few key parameters
     days_h_s <- round(as.numeric(difftime(delivery_date, harvest_date, units="days")+1))
@@ -537,7 +538,7 @@ server <- function(input, output, session){
     price_tab$price_base_field <- price_tab$price_base_ha*field_size
     price_tab$price_bonus_field <- price_tab$price_bonus_ha*field_size
     price_tab$price_field <- price_tab$price_ha*field_size
-    
+
     price_tab
     
     })
@@ -552,6 +553,8 @@ server <- function(input, output, session){
     # input from required inputs
     summary_tab_cols <- input$summary_tab_show
     summary_tab_length <- input$data_restrict
+    harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
+    delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     
     # Define summary table - columns
     summary_tab_show <- c("date_full", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","price_base_clean","price_bonus_clean","price_clean")
@@ -564,28 +567,40 @@ server <- function(input, output, session){
     summary_tab <- summary_tab[which(summary_tab$date_full >= harvest_date),]
     summary_tab <- summary_tab[which(summary_tab$date_full <= last_day),]
 
-    summary_tab_names <- c("Date", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
-    if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
-    if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
-    if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
-    colnames(summary_tab) <- summary_tab_names
-    
     # Extract a little info from summary table for later graphing
-    cum_loss_delivery <- summary_tab$cum_temp[summary_tab$date_full==delivery_date]
+    delivery_date <<- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
+    cum_loss_delivery <<- summary_tab$cum_temp[summary_tab$date_full==delivery_date]
     loss_max <- max(summary_tab$cum_percent_loss)
     pol_max <- max(summary_tab$cum_sug)
     pol_min <- min(summary_tab$cum_sug)
     pol_diff <- pol_max - pol_min
     amplify_factor <- 0.5
-    amplify <- loss_max/pol_diff*amplify_factor
-    move <- pol_max*amplify - loss_max*0.85
-          
+    amplify <<- loss_max/pol_diff*amplify_factor
+    move <<- pol_max*amplify - loss_max*0.85
+    
     summary_tab
+    
+  })
+  
+  summary_tab_output = reactive({
+    summary_tab_output <- data.frame(summary_tab())
+    
+    # input from required inputs
+    summary_tab_cols <- input$summary_tab_show
+    
+    summary_tab_names <- c("Date", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
+    if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
+    if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
+    if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
+    colnames(summary_tab_output) <- summary_tab_names
+    
+    summary_tab_output
     
   })
   
   # Summary Table of the bottom line
   summary_final_tab = reactive({
+    delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     summary_final_tab <- data.frame(price_tab())
     summary_final_tab <- summary_final_tab[which(summary_final_tab$date_full == delivery_date),]
     summary_final_tab <- matrix(summary_final_tab[c("price_base_delivered","price_bonus_delivered","price_delivered",
@@ -625,9 +640,10 @@ server <- function(input, output, session){
   })
   
   
-  summary_graph_temp <- plotly::renderPlotly({
-    ggplot(summary_tab()) + 
-      geom_line(aes(x=date_full, y=cum_temp, color = "Cum. temperature")) + 
+  output$summary_graph_temp <- plotly::renderPlotly({
+  
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y=cum_temp)) +
       geom_vline(xintercept = as.POSIXct(delivery_date), linetype="dotted") +
       geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
       scale_colour_manual("", 
@@ -637,9 +653,10 @@ server <- function(input, output, session){
       xlab("Date") +
       labs(title = "Temperature") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+    
   })
   
-  summary_graph_loss <- plotly::renderPlotly({
+  output$summary_graph_loss <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
       geom_line(aes(y = cum_percent_loss, color = "Cum. % loss")) + 
       geom_line(aes(y = cum_sug * amplify - move, color = "Pol")) +
@@ -654,7 +671,7 @@ server <- function(input, output, session){
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
-  summary_graph_price <- plotly::renderPlotly({
+  output$summary_graph_price <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
       geom_line(aes(y = price_clean, colour = "Total payment")) +
       geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
@@ -671,8 +688,8 @@ server <- function(input, output, session){
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
-  summary_graph_price_delivered <- plotly::renderPlotly({
-    ggplot(summary_tab, aes(x=date_full)) + 
+  output$summary_graph_price_delivered <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
       geom_line(aes(y = price_delivered, colour = "Total payment")) +
       geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
       geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment")) +
@@ -724,8 +741,8 @@ server <- function(input, output, session){
   })
   
   # Summary price  
-  output$summary_tab = renderTable({
-    summary_tab()
+  output$summary_tab_output = renderTable({
+    summary_tab_output()
   },rownames = T, digits=0)
   
   # Summary outputs  
