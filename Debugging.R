@@ -272,7 +272,7 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield, field_s
     labs(title = "Temperature") + 
     theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
 
-summary_graph_loss <- plotly::renderPlotly({
+# Plot of cum loss
   ggplot(summary_tab, aes(x=date_full)) + 
     geom_line(aes(y = cum_percent_loss, color = "Cum. % loss")) + 
     geom_line(aes(y = cum_sug * amplify - move, color = "Pol")) +
@@ -285,10 +285,9 @@ summary_graph_loss <- plotly::renderPlotly({
     xlab("Date") +
     labs(title = "Sugar loss") + 
     theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-})
 
-summary_graph_price <- plotly::renderPlotly({
-  ggplot(summary_tab(), aes(x=date_full)) + 
+# Plot of price series
+  ggplot(summary_tab, aes(x=date_full)) + 
     geom_line(aes(y = price_clean, colour = "Total payment")) +
     geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
     geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
@@ -302,9 +301,8 @@ summary_graph_price <- plotly::renderPlotly({
     xlab("Date") +
     labs(title = "Price per clean tonne") + 
     theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-})
 
-summary_graph_price_delivered <- plotly::renderPlotly({
+# Plot of price series - delivered
   ggplot(summary_tab, aes(x=date_full)) + 
     geom_line(aes(y = price_delivered, colour = "Total payment")) +
     geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
@@ -319,7 +317,7 @@ summary_graph_price_delivered <- plotly::renderPlotly({
     xlab("Date") +
     labs(title = "Price per delivered tonne") + 
     theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-})
+
 
 para_tab = reactive({
   para_tab_factor <- factor()*0.018

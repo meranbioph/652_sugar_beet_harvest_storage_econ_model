@@ -296,11 +296,11 @@ ui <- fluidPage(
     ),
     tabPanel("Summary graphs", fluid = T,
              fluidRow(
-               column(6,plotOutput("summary_graph_temp")),
-               column(6,plotOutput("summary_graph_loss"))
+               column(6,plotly::plotlyOutput("summary_graph_temp")),
+               column(6,plotly::plotlyOutput("summary_graph_loss"))
              ),
              fluidRow(
-               column(6,plotOutput("summary_graph_price")),
+               column(6,plotly::plotlyOutput("summary_graph_price")),
                column(6,)
              )
     ),
@@ -643,15 +643,15 @@ server <- function(input, output, session){
   output$summary_graph_temp <- plotly::renderPlotly({
   
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=cum_temp)) +
-      geom_vline(xintercept = as.POSIXct(delivery_date), linetype="dotted") +
+      geom_line(aes(y=cum_temp, color = "Cum. temperature")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Cum. temperature"),
                           values = c("Cum. temperature"="red3")) +
       ylab("Cumulative temperature (Cd)") + 
       xlab("Date") +
-      labs(title = "Temperature") + 
+      labs(title = "Temperature") +
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
     
   })
@@ -660,7 +660,7 @@ server <- function(input, output, session){
     ggplot(summary_tab(), aes(x=date_full)) + 
       geom_line(aes(y = cum_percent_loss, color = "Cum. % loss")) + 
       geom_line(aes(y = cum_sug * amplify - move, color = "Pol")) +
-      geom_vline(xintercept = as.POSIXct(delivery_date)) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
       scale_colour_manual("", 
                           breaks = c("Cum. % loss", "Pol"),
@@ -676,7 +676,7 @@ server <- function(input, output, session){
       geom_line(aes(y = price_clean, colour = "Total payment")) +
       geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
       geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
-      geom_vline(xintercept = as.POSIXct(delivery_date)) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
@@ -685,23 +685,6 @@ server <- function(input, output, session){
       ylab("Price (kr)") + 
       xlab("Date") +
       labs(title = "Price per clean tonne") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  })
-  
-  output$summary_graph_price_delivered <- plotly::renderPlotly({
-    ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_delivered, colour = "Total payment")) +
-      geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment")) +
-      geom_vline(xintercept = as.POSIXct(delivery_date)) +
-      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-      scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
-      ylab("Price (kr)") + 
-      xlab("Date") +
-      labs(title = "Price per delivered tonne") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
