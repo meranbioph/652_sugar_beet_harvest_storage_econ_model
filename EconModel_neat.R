@@ -86,11 +86,11 @@ kr_TT <- 5 # for the use of TopTex for at least 7 days prior to delivery, for de
 kr_late <- 1 # extra payment per tonne for beets delivered late
 kr_vol <- 5 # extra per tonne if area increases 10%
 date_full <- seq(as.POSIXct("2021-09-10", tz = "UTC", format = "%Y-%m-%d"), length.out = 172, by = "1 day")
-pris_early <- c(37,37,37,37,37,36,33,30,27,24,21,19,16,14,12,10,8,6,4,2,1,rep(0,151))
-pris_late <- c(rep(0,82),seq(1,23,by=1),seq(24.5,123.5,by=1.5))
-pris_TT <- c(rep(0,66),rep(5,8), rep(10,8), rep(15,90))
-pris_vol <- rep(0,172)
-price_tab_contract <- data.frame(date_full,pris_early, pris_late, pris_TT, pris_vol)
+price_early <- c(37,37,37,37,37,36,33,30,27,24,21,19,16,14,12,10,8,6,4,2,1,rep(0,151))
+price_late <- c(rep(0,82),seq(1,23,by=1),seq(24.5,123.5,by=1.5))
+price_TT <- c(rep(0,66),rep(5,8), rep(10,8), rep(15,90))
+price_vol <- rep(0,172)
+price_tab_contract <- data.frame(date_full,price_early, price_late, price_TT, price_vol)
 
 ## Reference values
 ref_hardness <- 50
@@ -102,11 +102,12 @@ ref_TT_3 <- as.POSIXct("2021-12-01", tz = "UTC", format = "%Y-%m-%d") # 15kr/tn 
 ref_early <- as.POSIXct("2021-09-30", tz = "UTC", format = "%Y-%m-%d") # last day the early payment is made for
 ref_late_1 <- as.POSIXct("2021-12-01", tz = "UTC", format = "%Y-%m-%d") #first day you get money for late delivery
 ref_late_2 <- as.POSIXct("2021-01-01", tz = "UTC", format = "%Y-%m-%d") #first day you get 1.5 x money for late delivery
-ref_Cd <- seq(1:500)
-ref_medel_linear <- ref_Cd*0.0188
-ref_medel_discont <- ifelse(ref_Cd <= 270, ref_Cd*0.013, 270*0.013+(ref_Cd-270)*0.042)
-ref_medel_quad <- (ref_Cd*-0.0043 + 0.000064*ref_Cd^2)
-ref_loss_data <- data.frame(ref_Cd,ref_medel_linear, ref_medel_discont, ref_medel_quad)
+cum_temp <- seq(1:1500)
+cum_temp <- c(0,cum_temp)
+ref_medel_linear <- cum_temp*0.0188
+ref_medel_discont <- ifelse(cum_temp <= 270, cum_temp*0.013, 270*0.013+(cum_temp-270)*0.042)
+ref_medel_quad <- (cum_temp*-0.0043 + 0.000064*cum_temp^2)
+ref_loss_data <- data.frame(cum_temp,ref_medel_linear, ref_medel_discont, ref_medel_quad)
 ref_temp <- 5
 first_day <- min(price_tab_contract$date_full)
 last_day <- max(price_tab_contract$date_full)
@@ -275,7 +276,7 @@ ui <- fluidPage(
                    sliderInput("renhet", "Renhet %", min=78, max=100, value=89.5, step = 0.1)
                  ),
                  mainPanel(
-                   tableOutput("price_tab")
+                   tableOutput("summary_final_tab")
                  ),
                  style = 'padding-left:15px'
                )
@@ -466,24 +467,16 @@ server <- function(input, output, session){
   }, rownames = T
   )
   
-  # Price table and Summary data
+  # FULL RESULTS TABLE
 
-  pris_tab = reactiveVal()
-  summary_tab = reactiveVal()  
-  summary_graph_temp = reactiveVal()
-  summary_graph_loss = reactiveVal()
-  summary_graph_price = reactiveVal()
-  summary_graph_price_delivered = reactiveVal()
-  comp_1_tab <- reactiveValues(data = NULL)
-  comp_2_tab <- reactiveValues(data = NULL)
-  #para_tab_factor <- reactiveVal()
-    
   price_tab = reactive({
-    temp_tab_p <- temp_tab()
-    loss_tab_p <- loss_tab()
-    root_harvest_tab_p <- root_harvest_tab()
-    temp_clamp_p <- temp_tab_p$temp_clamp
-    pris_tab <- rbind(price_tab_contract, temp_clamp_p)
+    # input from all previous tables
+    temp_tab_p <- data.frame(temp_tab())
+    loss_tab_p <- data.frame(loss_tab())
+    loss_tab_p <- loss_tab_p[,"actual"]
+    root_harvest_tab_p <- data.frame(root_harvest_tab())
+    
+    # input from required inputs
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     cover_date <- as.POSIXct(input$cover_date, tz = "UTC", format = "%Y-%m-%d")
@@ -492,81 +485,93 @@ server <- function(input, output, session){
     pol <- input$pol
     root_yield <- input$root_yield
     vol <- input$vol
-    summary_tab_show_input <- input$summary_tab_show
     
-    para_tab_factor <- factor()*0.018
-    
+    # calculate a few key parameters
     days_h_s <- round(as.numeric(difftime(delivery_date, harvest_date, units="days")+1))
     days_p_h <- round(as.numeric(difftime(last_day, harvest_date, units="days")+1))
-    #date_h_s <- seq(as.Date(harvest_date, tz = "UTC", format = "%Y-%m-%d"), length.out = days_h_S, by = "1 day")
-    pris_tab$cum_temp <- c(rep(0, (days_full - days_p_h)), cumsum(temp_clamp_p[which(pris_tab$date_full>=harvest_date)]))
-    pris_tab$cum_percent_loss <- (pris_tab$cum_temp*0.0128 + 0.00002*pris_tab$cum_temp^2)*factor
-    cum_percent_loss_max <- max(pris_tab$cum_percent_loss[which(pris_tab$date_full<=delivery_date)])
-    pris_tab$cum_sug <- pol + pol*(cum_percent_loss_max/100) - (pris_tab$cum_percent_loss/100)*pol
-    pris_tab$pol_factor <- (pris_tab$cum_sug - ref_pol*100)*kr_pol
+    
+    # bind the foundation of the table together
+    temp_clamp_p <- data.frame(date_full,temp_tab_p$temp_clamp)
+    names(temp_clamp_p)[2] <- "temp_clamp_p"
+    price_tab <- merge(price_tab_contract, temp_clamp_p, by="date_full")
+    
+    # start adding columns
+    ## Cumulative temp
+    price_tab$cum_temp <- c(rep(0, (days_full - days_p_h)), cumsum(price_tab$temp_clamp_p[which(price_tab$date_full>=harvest_date)]))
+    price_tab$cum_temp <- round(price_tab$cum_temp)
+    ## Loss for given temp 
+    price_tab <- merge(price_tab, loss_tab_p, by="cum_temp")
+    names(price_tab)[names(price_tab)=="actual"] <- "cum_percent_loss"
+    price_tab <- price_tab[,c("date_full","price_early","price_late","price_TT","price_vol","temp_clamp_p","cum_temp","cum_percent_loss")]
+    ## 
+    cum_percent_loss_max <- max(price_tab$cum_percent_loss[which(price_tab$date_full<=delivery_date)])
+    price_tab$cum_sug <- pol + pol*(cum_percent_loss_max/100) - (price_tab$cum_percent_loss/100)*pol
+    price_tab$pol_factor <- (price_tab$cum_sug - ref_pol*100)*kr_pol
     
     #TT bonus
-    pris_tab$pris_TT[pris_tab$date_full < as.POSIXct(cover_date)+7] <- 0
+    price_tab$price_TT[price_tab$date_full < as.POSIXct(cover_date)+7] <- 0
     
     #Volume bonus
-    vol <- input$vol
-    if (vol == T) pris_tab$pris_vol = kr_vol
+    if (vol == T) price_tab$price_vol = kr_vol
     
     #renhet bonus
     renhet_diff <- (renhet - ref_renhet)*100
-    pris_renhet <- renhet_diff * kr_renhet
+    price_renhet <- renhet_diff * kr_renhet
     
     # Clean prices
-    pris_tab$pris_base_clean <- kr_tonne+kr_tonne*pris_tab$pol_factor/100
-    pris_tab$pris_bonus_clean <- (pris_tab$pris_early + pris_tab$pris_late + pris_tab$pris_TT + pris_tab$pris_vol + pris_renhet)
-    pris_tab$pris_clean <- pris_tab$pris_base_clean +  pris_tab$pris_bonus_clean
+    price_tab$price_base_clean <- kr_tonne+kr_tonne*price_tab$pol_factor/100
+    price_tab$price_bonus_clean <- (price_tab$price_early + price_tab$price_late + price_tab$price_TT + price_tab$price_vol + price_renhet)
+    price_tab$price_clean <- price_tab$price_base_clean +  price_tab$price_bonus_clean
     
     # Delivered prices
-    pris_tab$pris_base_delivered <- pris_tab$pris_base_clean*renhet
-    pris_tab$pris_bonus_delivered <- pris_tab$pris_bonus_clean*renhet
-    pris_tab$pris_delivered <- pris_tab$pris_clean*renhet
+    price_tab$price_base_delivered <- price_tab$price_base_clean*renhet
+    price_tab$price_bonus_delivered <- price_tab$price_bonus_clean*renhet
+    price_tab$price_delivered <- price_tab$price_clean*renhet
     
     # Ha prices
-    pris_tab$pris_base_ha <- pris_tab$pris_base_delivered*root_yield
-    pris_tab$pris_bonus_ha <- pris_tab$pris_bonus_delivered*root_yield
-    pris_tab$pris_ha <- pris_tab$pris_delivered*root_yield
+    price_tab$price_base_ha <- price_tab$price_base_delivered*root_yield
+    price_tab$price_bonus_ha <- price_tab$price_bonus_delivered*root_yield
+    price_tab$price_ha <- price_tab$price_delivered*root_yield
 
     # Field prices
-    pris_tab$pris_base_field <- pris_tab$pris_base_ha*field_size
-    pris_tab$pris_bonus_field <- pris_tab$pris_bonus_ha*field_size
-    pris_tab$pris_field <- pris_tab$pris_ha*field_size
+    price_tab$price_base_field <- price_tab$price_base_ha*field_size
+    price_tab$price_bonus_field <- price_tab$price_bonus_ha*field_size
+    price_tab$price_field <- price_tab$price_ha*field_size
     
+    price_tab
     
-    
-    # Summary table data
-    summary_tab_show <- c("date_full", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","pris_base_clean","pris_bonus_clean","pris_clean")
-    if("DE" %in% summary_tab_show_input) summary_tab_show <- c(summary_tab_show, "pris_base_delivered","pris_bonus_delivered","pris_delivered")
-    if("HA" %in% summary_tab_show_input) summary_tab_show <- c(summary_tab_show, "pris_base_ha","pris_bonus_ha","pris_ha")
-    if("FI" %in% summary_tab_show_input) summary_tab_show <- c(summary_tab_show, "pris_base_field","pris_bonus_field","pris_field")
-    data_end_date <- last_day
-    if(input$data_restrict) data_end_date <- delivery_date
-    summary_tab <- pris_tab[, summary_tab_show]
-    summary_tab <- summary_tab[which(summary_tab$date_full >= harvest_date),]
-    summary_tab <- summary_tab[which(summary_tab$date_full <= data_end_date),]
-        
-    cum_loss_delivery = summary_tab$cum_temp[summary_tab$date_full==delivery_date]
-    
-    summary_graph_temp(
-      ggplot(summary_tab) + 
-        #geom_bar(aes(x=date, weight = temp_clamp_p)) +
-        geom_line(aes(x=date_full, y=cum_temp, color = "Cum. temperature")) + 
-        geom_vline(xintercept = as.POSIXct(delivery_date), linetype="dotted") +
-        geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
-        #scale_y_continuous(sec.axis = sec_axis(~., name = "Temperature (C)")) +
-        scale_colour_manual("", 
-                            breaks = c("Cum. temperature"),
-                            values = c("Cum. temperature"="red3")) +
-        ylab("Cumulative temperature (Cd)") + 
-        xlab("Date") +
-        labs(title = "Temperature") + 
-        theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-    )
+    })
 
+  # SUMMARY (VISUALISED) RESULTS
+  ##!!! This should really just restrict the full results table within the parameters given.
+      
+  summary_tab = reactive({
+    # input from required previous tables
+    summary_tab <- data.frame(price_tab())
+    
+    # input from required inputs
+    summary_tab_cols <- input$summary_tab_show
+    summary_tab_length <- input$data_restrict
+    
+    # Define summary table - columns
+    summary_tab_show <- c("date_full", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","price_base_clean","price_bonus_clean","price_clean")
+    if("DE" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_delivered","price_bonus_delivered","price_delivered")
+    if("HA" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_ha","price_bonus_ha","price_ha")
+    if("FI" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_field","price_bonus_field","price_field")
+    summary_tab <- summary_tab[, summary_tab_show]
+    # Define summary table - length (ie rows)
+    if(summary_tab_length) last_day <- delivery_date
+    summary_tab <- summary_tab[which(summary_tab$date_full >= harvest_date),]
+    summary_tab <- summary_tab[which(summary_tab$date_full <= last_day),]
+
+    summary_tab_names <- c("Date", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
+    if("DE" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
+    if("HA" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
+    if("FI" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
+    colnames(summary_tab) <- summary_tab_names
+    
+    # Extract a little info from summary table for later graphing
+    cum_loss_delivery <- summary_tab()$cum_temp[summary_tab$date_full==delivery_date]
     loss_max <- max(summary_tab$cum_percent_loss)
     pol_max <- max(summary_tab$cum_sug)
     pol_min <- min(summary_tab$cum_sug)
@@ -574,84 +579,26 @@ server <- function(input, output, session){
     amplify_factor <- 0.5
     amplify <- loss_max/pol_diff*amplify_factor
     move <- pol_max*amplify - loss_max*0.85
-    
-    summary_graph_loss(
-      ggplot(summary_tab, aes(x=date_full)) + 
-        geom_line(aes(y = cum_percent_loss, color = "Cum. % loss")) + 
-        geom_line(aes(y = cum_sug * amplify - move, color = "Pol")) +
-        geom_vline(xintercept = as.POSIXct(delivery_date)) +
-        scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
-        scale_colour_manual("", 
-                            breaks = c("Cum. % loss", "Pol"),
-                            values = c("Cum. % loss"="red3", "Pol"="blue3")) +
-        ylab("Sugar loss (%)") + 
-        xlab("Date") +
-        labs(title = "Sugar loss") + 
-        theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-    )
-      
-    summary_graph_price(
-      ggplot(summary_tab, aes(x=date_full)) + 
-        geom_line(aes(y = pris_clean, colour = "Total payment")) +
-        geom_line(aes(y = pris_base_clean, colour = "Base payment")) + 
-        geom_line(aes(y = pris_bonus_clean, colour = "Bonus payment")) +
-        geom_vline(xintercept = as.POSIXct(delivery_date)) +
-        #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-        scale_colour_manual("", 
-                            breaks = c("Total payment", "Base payment", "Bonus payment"),
-                            values = c("Total payment"="red3", "Base payment"="blue3", 
-                                       "Bonus payment"="green3")) +
-        ylab("Price (kr)") + 
-        xlab("Date") +
-        labs(title = "Price per clean tonne") + 
-        theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-    )
-    
-    summary_graph_price_delivered(
-      ggplot(summary_tab, aes(x=date_full)) + 
-        geom_line(aes(y = pris_delivered, colour = "Total payment")) +
-        geom_line(aes(y = pris_base_delivered, colour = "Base payment")) + 
-        geom_line(aes(y = pris_bonus_delivered, colour = "Bonus payment")) +
-        geom_vline(xintercept = as.POSIXct(delivery_date)) +
-        #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-        scale_colour_manual("", 
-                            breaks = c("Total payment", "Base payment", "Bonus payment"),
-                            values = c("Total payment"="red3", "Base payment"="blue3", 
-                                       "Bonus payment"="green3")) +
-        ylab("Price (kr)") + 
-        xlab("Date") +
-        labs(title = "Price per delivered tonne") + 
-        theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-    )
-    
-    price_tab <- pris_tab[which(pris_tab$date_full == delivery_date),]
-    price_tab <- matrix(price_tab[c("pris_base_delivered","pris_bonus_delivered","pris_delivered",
-                                    "pris_base_clean","pris_bonus_clean","pris_clean",
-                                    "pris_base_ha","pris_bonus_ha","pris_ha",
-                                    "pris_base_field","pris_bonus_field","pris_field")],
-                           byrow=T,nrow=4)
-    rownames(price_tab) <- c("Tonne - delivered", "Tonne - clean", "Hectare", "Field")
-    colnames(price_tab) <- c("Base price","Bonuses","Total payment")
-    
-    summary_tab_names <- c("Date", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
-    if("DE" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
-    if("HA" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
-    if("FI" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
-    colnames(summary_tab) <- summary_tab_names
-    
-    summary_tab(
-      summary_tab
-    )
-
-    pris_tab_post_harvest <- pris_tab[which(pris_tab$date_full>=harvest_date),]    
-    pris_tab(
-      pris_tab_post_harvest
-    )
           
-    price_tab
+    summary_tab
     
   })
   
+  # Summary Table of the bottom line
+  summary_final_tab = reactive({
+    summary_final_tab <- data.frame(summary_tab())
+    summary_final_tab <- summary_tab_final[which(summary_tab_final$date_full == delivery_date),]
+    summary_final_tab <- matrix(summary_tab_final[c("price_base_delivered","price_bonus_delivered","price_delivered",
+                                    "price_base_clean","price_bonus_clean","price_clean",
+                                    "price_base_ha","price_bonus_ha","price_ha",
+                                    "price_base_field","price_bonus_field","price_field")],
+                        byrow=T,nrow=4)
+    rownames(summary_final_tab) <- c("Tonne - delivered", "Tonne - clean", "Hectare", "Field")
+    colnames(summary_final_tab) <- c("Base price","Bonuses","Total payment")
+    
+    summary_final_tab
+    
+    })
   ###############
   # VISUALS
   
@@ -668,15 +615,81 @@ server <- function(input, output, session){
   # Plot of sugar loss
   output$loss_Cd <- plotly::renderPlotly({
     
-    ggplot(loss_tab(), aes(x=ref_Cd)) + 
+    ggplot(loss_tab(), aes(x=cum_temp)) + 
       geom_line(aes(y = actual), color = "darkred") + 
       geom_line(aes(y = ref_medel), color="steelblue", linetype="twodash") +
+      xlim(0,500)+
       ylab("Sugar loss (%)") + 
       xlab("Accumulated temperature (Cd)")
   })
   
+  
+  summary_graph_temp <- plotly::renderPlotly({
+    ggplot(summary_tab()) + 
+      geom_line(aes(x=date_full, y=cum_temp, color = "Cum. temperature")) + 
+      geom_vline(xintercept = as.POSIXct(delivery_date), linetype="dotted") +
+      geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c("Cum. temperature"),
+                          values = c("Cum. temperature"="red3")) +
+      ylab("Cumulative temperature (Cd)") + 
+      xlab("Date") +
+      labs(title = "Temperature") + 
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  summary_graph_loss <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = cum_percent_loss, color = "Cum. % loss")) + 
+      geom_line(aes(y = cum_sug * amplify - move, color = "Pol")) +
+      geom_vline(xintercept = as.POSIXct(delivery_date)) +
+      scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
+      scale_colour_manual("", 
+                          breaks = c("Cum. % loss", "Pol"),
+                          values = c("Cum. % loss"="red3", "Pol"="blue3")) +
+      ylab("Sugar loss (%)") + 
+      xlab("Date") +
+      labs(title = "Sugar loss") + 
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  summary_graph_price <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = price_clean, colour = "Total payment")) +
+      geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
+      geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
+      geom_vline(xintercept = as.POSIXct(delivery_date)) +
+      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
+      scale_colour_manual("", 
+                          breaks = c("Total payment", "Base payment", "Bonus payment"),
+                          values = c("Total payment"="red3", "Base payment"="blue3", 
+                                     "Bonus payment"="green3")) +
+      ylab("Price (kr)") + 
+      xlab("Date") +
+      labs(title = "Price per clean tonne") + 
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  summary_graph_price_delivered <- plotly::renderPlotly({
+    ggplot(summary_tab, aes(x=date_full)) + 
+      geom_line(aes(y = price_delivered, colour = "Total payment")) +
+      geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
+      geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment")) +
+      geom_vline(xintercept = as.POSIXct(delivery_date)) +
+      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
+      scale_colour_manual("", 
+                          breaks = c("Total payment", "Base payment", "Bonus payment"),
+                          values = c("Total payment"="red3", "Base payment"="blue3", 
+                                     "Bonus payment"="green3")) +
+      ylab("Price (kr)") + 
+      xlab("Date") +
+      labs(title = "Price per delivered tonne") + 
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
   para_tab = reactive({
-    para_tab <- data.frame(input$pol,input$renhet, input$delivery_date, para_tab_factor(), input$root_yield*input$field_size)
+    para_tab_factor <- factor()*0.018
+    para_tab <- data.frame(input$pol,input$renhet, input$delivery_date, para_tab_factor, input$root_yield*input$field_size)
     colnames(para_tab) <- c("Pol", "Cleanness", "Delivery date", "Storage loss rate (%/Cd)", "Harvest")
     para_tab
     })
@@ -684,13 +697,13 @@ server <- function(input, output, session){
   observeEvent(input$comp_1, {
                  comp_1_tab$data <- summary_tab()
                  comp_1_tab$para <- para_tab()
-                 comp_1_tab$payment <- pris_tab()
+                 comp_1_tab$payment <- price_tab()
                })
   
   observeEvent(input$comp_2, {
                 comp_2_tab$data <- summary_tab()
                 comp_2_tab$para <- para_tab()
-                comp_2_tab$payment <- pris_tab()
+                comp_2_tab$payment <- price_tab()
               })
   
   output$comp_1_tab = renderTable({
@@ -710,32 +723,13 @@ server <- function(input, output, session){
   })
   
   # Summary price  
-  output$price_tab = renderTable({
-    price_tab()
+  output$summary_tab = renderTable({
+    summary_tab()
   },rownames = T, digits=0)
   
   # Summary outputs  
-  output$summary_tab = renderTable({
-    summary_tab()
-  })
-  
-  # temp graph
-  output$summary_graph_temp = renderPlot({
-    summary_graph_temp()
-  })
-
-  # loss graph
-  output$summary_graph_loss = renderPlot({
-    summary_graph_loss()
-  })
-  
-  # price graph
-  output$summary_graph_price = renderPlot({
-    summary_graph_price()
-  })
-  
-  output$summary_graph_price_delivered = renderPlot({
-    summary_graph_price_delivered()
+  output$summary_final_tab = renderTable({
+    summary_final_tab()
   })
  
   output$summary_graph_price_comp_1 = renderPlot({
@@ -757,9 +751,9 @@ server <- function(input, output, session){
   
   output$summary_graph_payment_comp_1 = renderPlot({
       ggplot(comp_1_tab$payment, aes(x=date_full)) + 
-        geom_line(aes(y = pris_field, colour = "Total payment")) +
-        geom_line(aes(y = pris_base_field, colour = "Base payment")) + 
-        geom_line(aes(y = pris_bonus_field, colour = "Bonus payment")) +
+        geom_line(aes(y = price_field, colour = "Total payment")) +
+        geom_line(aes(y = price_base_field, colour = "Base payment")) + 
+        geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
         geom_vline(xintercept = as.POSIXct(delivery_date)) +
         #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
         scale_colour_manual("", 
@@ -791,9 +785,9 @@ server <- function(input, output, session){
   
   output$summary_graph_payment_comp_2 = renderPlot({
     ggplot(comp_2_tab$payment, aes(x=date_full)) + 
-      geom_line(aes(y = pris_field, colour = "Total payment")) +
-      geom_line(aes(y = pris_base_field, colour = "Base payment")) + 
-      geom_line(aes(y = pris_bonus_field, colour = "Bonus payment")) +
+      geom_line(aes(y = price_field, colour = "Total payment")) +
+      geom_line(aes(y = price_base_field, colour = "Base payment")) + 
+      geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
       geom_vline(xintercept = as.POSIXct(delivery_date)) +
       #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
@@ -847,7 +841,8 @@ renhet <- 90
 ref_renhet <- 0.895
 vol <- F
 data_restrict <- F
+loss_model <- 1
 
 input <- data.frame(harvest_date, delivery_date, cover_date, root_yield, field_size, delivery_distance, delivery_cost, delivery_loads,
-                    ref_temp, pol, clamp_size, moisture, factor, renhet, vol, price, data_restrict)
+                    ref_temp, pol, clamp_size, moisture, factor, renhet, vol, price, data_restrict, loss_model)
 
