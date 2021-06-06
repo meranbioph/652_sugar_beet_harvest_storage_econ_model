@@ -473,7 +473,7 @@ server <- function(input, output, session){
     # input from all previous tables
     temp_tab_p <- data.frame(temp_tab())
     loss_tab_p <- data.frame(loss_tab())
-    loss_tab_p <- loss_tab_p[,"actual"]
+    loss_tab_p <- loss_tab_p[,c("cum_temp","actual")]
     root_harvest_tab_p <- data.frame(root_harvest_tab())
     
     # input from required inputs
@@ -565,13 +565,13 @@ server <- function(input, output, session){
     summary_tab <- summary_tab[which(summary_tab$date_full <= last_day),]
 
     summary_tab_names <- c("Date", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
-    if("DE" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
-    if("HA" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
-    if("FI" %in% summary_tab_show_input) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
+    if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
+    if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
+    if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
     colnames(summary_tab) <- summary_tab_names
     
     # Extract a little info from summary table for later graphing
-    cum_loss_delivery <- summary_tab()$cum_temp[summary_tab$date_full==delivery_date]
+    cum_loss_delivery <- summary_tab$cum_temp[summary_tab$date_full==delivery_date]
     loss_max <- max(summary_tab$cum_percent_loss)
     pol_max <- max(summary_tab$cum_sug)
     pol_min <- min(summary_tab$cum_sug)
@@ -586,13 +586,13 @@ server <- function(input, output, session){
   
   # Summary Table of the bottom line
   summary_final_tab = reactive({
-    summary_final_tab <- data.frame(summary_tab())
-    summary_final_tab <- summary_tab_final[which(summary_tab_final$date_full == delivery_date),]
-    summary_final_tab <- matrix(summary_tab_final[c("price_base_delivered","price_bonus_delivered","price_delivered",
-                                    "price_base_clean","price_bonus_clean","price_clean",
-                                    "price_base_ha","price_bonus_ha","price_ha",
-                                    "price_base_field","price_bonus_field","price_field")],
-                        byrow=T,nrow=4)
+    summary_final_tab <- data.frame(price_tab())
+    summary_final_tab <- summary_final_tab[which(summary_final_tab$date_full == delivery_date),]
+    summary_final_tab <- matrix(summary_final_tab[c("price_base_delivered","price_bonus_delivered","price_delivered",
+                                                    "price_base_clean","price_bonus_clean","price_clean",
+                                                    "price_base_ha","price_bonus_ha","price_ha",
+                                                    "price_base_field","price_bonus_field","price_field")],
+                                byrow=T,nrow=4)
     rownames(summary_final_tab) <- c("Tonne - delivered", "Tonne - clean", "Hectare", "Field")
     colnames(summary_final_tab) <- c("Base price","Bonuses","Total payment")
     
@@ -618,7 +618,8 @@ server <- function(input, output, session){
     ggplot(loss_tab(), aes(x=cum_temp)) + 
       geom_line(aes(y = actual), color = "darkred") + 
       geom_line(aes(y = ref_medel), color="steelblue", linetype="twodash") +
-      xlim(0,500)+
+      xlim(0,500) +
+      ylim(0,15) +
       ylab("Sugar loss (%)") + 
       xlab("Accumulated temperature (Cd)")
   })
