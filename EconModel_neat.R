@@ -210,8 +210,8 @@ ui <- fluidPage(
                    sliderInput("late_moisture", "Moisture late in the season, as percent of ideal", min=0, max=200, value=100),
                    sliderInput("harvester_cleaning", "Rotor speed", min=0, max=100, value=40),
                    h4("Loss model"),
-                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3))
-                   
+                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3)),
+                   actionButton("help_harvest", "?")
                  ),
                  mainPanel(
                    plotly::plotlyOutput("loss_Cd")
@@ -221,12 +221,13 @@ ui <- fluidPage(
                fluidRow(
                  sidebarPanel(
                    h4("STORAGE"),
-                   sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
                    dateInput("cover_date", "Date of cover with TopTex", value="2021-12-01"),
                    h4("Temperature model"),
                    selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
                    selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3)),
-                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5)
+                   sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
+                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5),
+                   actionButton("help_storage", "?")
                    ),
                  mainPanel(
                    plotly::plotlyOutput("temp_graph")
@@ -683,6 +684,44 @@ server <- function(input, output, session){
       labs(title = "Price per clean tonne") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
+  
+  ###############################
+  # HELP!
+  
+  observeEvent(input$help_harvest, {
+    showModal(modalDialog(
+      title = "Harvest",
+      "Harvest conditions determine the rate of damage.", br(), br(),
+      "Harder harvest conditions, a higher roter speed, and weaker beet varieties (selected on the previous page) give higher damage.",
+      "Higher damage means higher loss during storage.", br(), br(),
+      "The higher your damage score, the higher your rate of loss will be for each degree-day.",
+      "You can see this in the graph of damage per degree day (right) - your storage loss (red line) relative to the median loss (blue dashed line).", br(), br(),
+      "The Loss Models are different ways of defining the relationship between storage loss and degree-days.",
+      "Sources: Linear model - Jaggard et al. 1997. Discontinuous and Quadratics - Legrande and Wauters, 2012",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$help_storage, {
+    showModal(modalDialog(
+      title = "Storage",
+      "Storage conditions determine the clamp temperature in relation to the air temperature.", br(), br(),
+      "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", br(), br(),
+      "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature -",
+      "a wider clamp will build more heat than a thinner one.", 
+      "At 7m, this multiplication factor is 1.00. At 9m, it is 1.10",br(), br(),
+      "The difference years give historical mean temperatures for Borgeby.",br(), br(),
+      "The difference Clamp Temp Models define different relationships between clamp temperature and air temperature.",
+      "For models with a temperature floor - a minimum temperature the clamp can go to - Temperature Floor sets this.",br(), br(),
+      "Sources: just general observation",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  ###############################
+  # COMPARISONS
   
   #para_tab = reactive({
   #  para_tab_factor <- factor()*0.018
