@@ -355,8 +355,8 @@ output$comp_2_para = renderTable({
 })
 
 # Summary price  
-output$summary_tab = renderTable({
-  summary_tab()
+output$summary_tab_output = renderTable({
+  summary_tab_output
 },rownames = T, digits=0)
 
 # Summary outputs  

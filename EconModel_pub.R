@@ -6,63 +6,13 @@
 #
 ########################################
 
+library(shiny)
+library(plotly)
+library(sets)
+library(ggplot2)
+library(reshape2) 
+library(TTR)
 
-###############################################
-#
-# Setup
-#
-###############################################
-
-{
- # -------------------------------------------
- snapshot_date = "2021-03-18"
- options("repos" = paste0("https://mran.revolutionanalytics.com/snapshot/", snapshot_date))
- # -------------------------------------------
-
- # -------------------------------------------
- # sink options
- options(width = 150)
- # rJava memory option
- options(java.parameters = "-Xmx8000m")
- # -------------------------------------------
-
- # R packages
- # -------------------------------------------
- Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", 
-                       "ggplot2_3.3.3", "reshape2_1.4.4", "TTR_0.24.2")
- path_Rpackages = "C:/R packages_404"
- # -------------------------------------------
- 
- # -------------------------------------------
- sessionInfo()
- # -------------------------------------------
-
- # version check and load packages
- # -------------------------------------------
- # R version check
- if(sessionInfo()$R.version$version.string != "R version 4.0.4 (2021-02-15)") stop("R.version must be 4.0.4 (2021-02-15)")
-
- # install packages
- Rpack = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[1])
- Rpack_version = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[2])
- if(!all(Rpack %in% list.files(path_Rpackages))){
-   loadRpackages <- Rpack[!Rpack %in% list.files(path_Rpackages)]
-   for(i in loadRpackages) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
- }
-
- # load packages
- for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
-
- # Version check
- loadedPackagesAndVersions = sapply(sessionInfo()$otherPkgs, FUN = function(x) paste(x$Package, x$Version, sep = "_"))
- Rpack = Rpack[!Rpackages_version %in% loadedPackagesAndVersions]
- if(length(Rpack) > 0){
-   for(i in rev(Rpack)) try(eval(parse(text = paste0("detach('package:", i, "', unload = T)"))), silent = T)
-   for(i in Rpack) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
-   for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
- }
-}
- 
 ###############################################
 # ---------------------------------------------
 # THE MODEL
@@ -287,33 +237,7 @@ ui <- fluidPage(
                column(6,plotly::plotlyOutput("summary_graph_price")),
                column(6,)
              )
-    ) #,
-    #tabPanel("Payment Comparison", fluid = T,
-    #         fluidRow(
-    #           column(7, actionButton("comp_1", "Compare the current set-up")),
-    #           column(5, actionButton("comp_2", "Compare the current set-up"))
-    #         ),
-    #         fluidRow(
-    #           column(5,tableOutput("comp_1_para")), # table summarising the last week of data for the case
-    #           column(2,),
-    #           column(5,tableOutput("comp_2_para"))
-    #         ),
-    #         fluidRow(
-    #           column(5,plotOutput("summary_graph_price_comp_1")), # graph showing the payment graph
-    #           column(2,),
-    #           column(5,plotOutput("summary_graph_price_comp_2"))
-    #           ),
-    #         fluidRow(
-    #           column(5,plotOutput("summary_graph_payment_comp_1")), # graph showing the payment graph
-    #           column(2,),
-    #           column(5,plotOutput("summary_graph_payment_comp_2"))
-    #         ),
-    #         fluidRow(
-    #           column(5,tableOutput("comp_1_tab")),
-    #           column(2,), # table summarising the case
-    #           column(5,tableOutput("comp_2_tab"))
-    #         )
-    #)
+    )
   )
 )
 
@@ -603,16 +527,6 @@ server <- function(input, output, session){
   ###############
   # VISUALS
   
-  # Summary price table
-  output$summary_tab_output = renderTable({
-    summary_tab_output()
-  }, digits=1)
-  
-  # Summary outputs table
-  output$summary_final_tab = renderTable({
-    summary_final_tab()
-  },rownames = T, digits=0)
-  
   # Plot of temperatures (Air and Clamp)
   output$temp_graph <- plotly::renderPlotly({
     
@@ -684,109 +598,15 @@ server <- function(input, output, session){
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
-  #para_tab = reactive({
-  #  para_tab_factor <- factor()*0.018
-  #  para_tab <- data.frame(input$pol,input$renhet, input$delivery_date, para_tab_factor, input$root_yield*input$field_size)
-  #  colnames(para_tab) <- c("Pol", "Cleanness", "Delivery date", "Storage loss rate (%/Cd)", "Harvest")
-  #  para_tab
-  #  })
-  #
-  #observeEvent(input$comp_1, {
-  #               comp_1_tab$data <- summary_tab()
-  #               comp_1_tab$para <- para_tab()
-  #               comp_1_tab$payment <- price_tab()
-  #             })
-  #  
-  #observeEvent(input$comp_2, {
-  #              comp_2_tab$data <- summary_tab()
-  #              comp_2_tab$para <- para_tab()
-  #              comp_2_tab$payment <- price_tab()
-  #            })
-  #
-  #output$comp_1_tab = renderTable({
-  #  comp_1_tab$data
-  #})
-  #
-  #output$comp_1_para = renderTable({
-  #  comp_1_tab$para
-  #})
-  #
-  #output$comp_2_tab = renderTable({
-  #  comp_2_tab$data
-  #})
-  #
-  #output$comp_2_para = renderTable({
-  #  comp_2_tab$para
-  #})
-  #
-  #
-  #output$summary_graph_price_comp_1 = renderPlot({
-  #  ggplot(comp_1_tab$data, aes(x=get("Date"))) + 
-  #    geom_line(aes(y = get("Payment - clean tn"), colour = "Total payment")) +
-  #    geom_line(aes(y = get("Base price - clean tn"), colour = "Base payment")) + 
-  #    geom_line(aes(y = get("Bonus - clean tn"), colour = "Bonus payment")) +
-  #    geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #    #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                        values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                   "Bonus payment"="green3")) +
-  #    ylab("Price (kr)") + 
-  #    xlab("Date") +
-  #    labs(title = "Price per clean tonne") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
-  #
-  #output$summary_graph_payment_comp_1 = renderPlot({
-  #    ggplot(comp_1_tab$payment, aes(x=date_full)) + 
-  #      geom_line(aes(y = price_field, colour = "Total payment")) +
-  #      geom_line(aes(y = price_base_field, colour = "Base payment")) + 
-  #      geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
-  #      geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #      scale_colour_manual("", 
-  #                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                          values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                     "Bonus payment"="green3")) +
-  #      ylab("Payment (kr)") + 
-  #      xlab("Date") +
-  #      labs(title = "Payment per field") + 
-  #      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
-  #
-  #output$summary_graph_price_comp_2 = renderPlot({
-  #  ggplot(comp_2_tab$data, aes(x=get("Date"))) + 
-  #    geom_line(aes(y = get("Payment - clean tn"), colour = "Total payment")) +
-  #    geom_line(aes(y = get("Base price - clean tn"), colour = "Base payment")) + 
-  #    geom_line(aes(y = get("Bonus - clean tn"), colour = "Bonus payment")) +
-  #    geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #    #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                        values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                   "Bonus payment"="green3")) +
-  #    ylab("Price (kr)") + 
-  #    xlab("Date") +
-  #    labs(title = "Price per clean tonne") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
-  #
-  #output$summary_graph_payment_comp_2 = renderPlot({
-  #  ggplot(comp_2_tab$payment, aes(x=date_full)) + 
-  #    geom_line(aes(y = price_field, colour = "Total payment")) +
-  #    geom_line(aes(y = price_base_field, colour = "Base payment")) + 
-  #    geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
-  #    geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #    #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                        values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                   "Bonus payment"="green3")) +
-  #    ylab("Payment (kr)") + 
-  #    xlab("Date") +
-  #    labs(title = "Payment per field") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
+  # Summary price  
+  output$summary_tab_output = renderTable({
+    summary_tab_output()
+  }, digits=1)
+  
+  # Summary outputs  
+  output$summary_final_tab = renderTable({
+    summary_final_tab()
+  },rownames = T, digits=0)
   
 }
 
