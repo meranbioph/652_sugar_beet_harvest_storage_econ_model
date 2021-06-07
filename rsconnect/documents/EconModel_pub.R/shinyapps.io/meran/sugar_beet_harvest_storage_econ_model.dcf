@@ -1,0 +1,14 @@
+name: sugar_beet_harvest_storage_econ_model
+title: sugar_beet_harvest_storage_econ_model
+username:
+account: meran
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4237269
+bundleId: 4686399
+url: https://meran.shinyapps.io/sugar_beet_harvest_storage_econ_model/
+when: 1623051263.88973
+lastSyncTime: 1623051263.88973
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|Debugging.R|EconModel.R|EconModel_neat.R|README.md

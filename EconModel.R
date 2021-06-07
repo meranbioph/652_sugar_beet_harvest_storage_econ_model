@@ -6,58 +6,78 @@
 #
 ########################################
 
-# -------------------------------------------
-snapshot_date = "2021-03-18"
-options("repos" = paste0("https://mran.revolutionanalytics.com/snapshot/", snapshot_date))
-# -------------------------------------------
 
-# -------------------------------------------
-# sink options
-options(width = 150)
-# rJava memory option
-options(java.parameters = "-Xmx8000m")
-# -------------------------------------------
+###############################################
+#
+# Setup
+#
+###############################################
 
-# R packages
-# -------------------------------------------
-Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", "ggplot2_3.3.3")
-path_Rpackages = "C:/R packages_404"
-# -------------------------------------------
+{
+ # -------------------------------------------
+ snapshot_date = "2021-03-18"
+ options("repos" = paste0("https://mran.revolutionanalytics.com/snapshot/", snapshot_date))
+ # -------------------------------------------
 
-# -------------------------------------------
-sessionInfo()
-# -------------------------------------------
+ # -------------------------------------------
+ # sink options
+ options(width = 150)
+ # rJava memory option
+ options(java.parameters = "-Xmx8000m")
+ # -------------------------------------------
 
-# version check and load packages
-# -------------------------------------------
-# R version check
-if(sessionInfo()$R.version$version.string != "R version 4.0.4 (2021-02-15)") stop("R.version must be 4.0.4 (2021-02-15)")
+ # R packages
+ # -------------------------------------------
+ Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", 
+                       "ggplot2_3.3.3", "reshape2_1.4.4", "TTR_0.24.2")
+ path_Rpackages = "C:/R packages_404"
+ # -------------------------------------------
+ 
+ # -------------------------------------------
+ sessionInfo()
+ # -------------------------------------------
 
-# install packages
-Rpack = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[1])
-Rpack_version = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[2])
-if(!all(Rpack %in% list.files(path_Rpackages))){
-  loadRpackages <- Rpack[!Rpack %in% list.files(path_Rpackages)]
-  for(i in loadRpackages) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+ # version check and load packages
+ # -------------------------------------------
+ # R version check
+ if(sessionInfo()$R.version$version.string != "R version 4.0.4 (2021-02-15)") stop("R.version must be 4.0.4 (2021-02-15)")
+
+ # install packages
+ Rpack = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[1])
+ Rpack_version = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[2])
+ if(!all(Rpack %in% list.files(path_Rpackages))){
+   loadRpackages <- Rpack[!Rpack %in% list.files(path_Rpackages)]
+   for(i in loadRpackages) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+ }
+
+ # load packages
+ for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
+
+ # Version check
+ loadedPackagesAndVersions = sapply(sessionInfo()$otherPkgs, FUN = function(x) paste(x$Package, x$Version, sep = "_"))
+ Rpack = Rpack[!Rpackages_version %in% loadedPackagesAndVersions]
+ if(length(Rpack) > 0){
+   for(i in rev(Rpack)) try(eval(parse(text = paste0("detach('package:", i, "', unload = T)"))), silent = T)
+   for(i in Rpack) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
+   for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
+ }
 }
-
-# load packages
-for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
-
-# Version check
-loadedPackagesAndVersions = sapply(sessionInfo()$otherPkgs, FUN = function(x) paste(x$Package, x$Version, sep = "_"))
-Rpack = Rpack[!Rpackages_version %in% loadedPackagesAndVersions]
-if(length(Rpack) > 0){
-  for(i in rev(Rpack)) try(eval(parse(text = paste0("detach('package:", i, "', unload = T)"))), silent = T)
-  for(i in Rpack) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
-  for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
-}
-
-# -------------------------------------------
+ 
+###############################################
+# ---------------------------------------------
 # THE MODEL
-# -------------------------------------------
+# ---------------------------------------------
+###############################################
 
+###############################################
+#
 # Model coefficients
+#
+# Building the model components, 
+#  framework and base data
+#
+###############################################
+
 ## Prices per tonne
 kr_tonne <- 275 # at reference pol of 17%
 kr_renhet <- 2 # extra kr per %-point over ref, at 17% pol%
@@ -65,39 +85,68 @@ kr_pol <- 9 # extra % per %-point over ref of 17% pol
 kr_TT <- 5 # for the use of TopTex for at least 7 days prior to delivery, for delivery after 15 November
 kr_late <- 1 # extra payment per tonne for beets delivered late
 kr_vol <- 5 # extra per tonne if area increases 10%
-date_full <- seq(as.POSIXct("2020-09-10", tz = "UTC", format = "%Y-%m-%d"), length.out = 172, by = "1 day")
+date_full <- seq(as.POSIXct("2021-09-10", tz = "UTC", format = "%Y-%m-%d"), length.out = 172, by = "1 day")
 pris_early <- c(37,37,37,37,37,36,33,30,27,24,21,19,16,14,12,10,8,6,4,2,1,rep(0,151))
 pris_late <- c(rep(0,82),seq(1,23,by=1),seq(24.5,123.5,by=1.5))
 pris_TT <- c(rep(0,66),rep(5,8), rep(10,8), rep(15,90))
 pris_vol <- rep(0,172)
 kr_tab <- data.frame(date_full,pris_early, pris_late, pris_TT, pris_vol)
 
-## References
+## Reference values
 ref_hardness <- 50
 ref_pol <- 0.17
 ref_renhet <- 0.895
-ref_TT_1 <- as.POSIXct("2020-11-15", tz = "UTC", format = "%Y-%m-%d") # 5kr/tn beets
-ref_TT_2 <- as.POSIXct("2020-11-22", tz = "UTC", format = "%Y-%m-%d") # 10kr/tn beets
-ref_TT_3 <- as.POSIXct("2020-12-01", tz = "UTC", format = "%Y-%m-%d") # 15kr/tn beets
-ref_early <- as.POSIXct("2020-09-30", tz = "UTC", format = "%Y-%m-%d") # last day the early payment is made for
-ref_late_1 <- as.POSIXct("2020-12-01", tz = "UTC", format = "%Y-%m-%d") #first day you get money for late delivery
+ref_TT_1 <- as.POSIXct("2021-11-15", tz = "UTC", format = "%Y-%m-%d") # 5kr/tn beets
+ref_TT_2 <- as.POSIXct("2021-11-22", tz = "UTC", format = "%Y-%m-%d") # 10kr/tn beets
+ref_TT_3 <- as.POSIXct("2021-12-01", tz = "UTC", format = "%Y-%m-%d") # 15kr/tn beets
+ref_early <- as.POSIXct("2021-09-30", tz = "UTC", format = "%Y-%m-%d") # last day the early payment is made for
+ref_late_1 <- as.POSIXct("2021-12-01", tz = "UTC", format = "%Y-%m-%d") #first day you get money for late delivery
 ref_late_2 <- as.POSIXct("2021-01-01", tz = "UTC", format = "%Y-%m-%d") #first day you get 1.5 x money for late delivery
 ref_Cd <- seq(1:500)
-ref_medel <- (ref_Cd*0.000128 + 0.0000002*ref_Cd^2)*100
-ref_loss_data <- data.frame(ref_Cd,ref_medel)
+ref_medel_linear <- ref_Cd*0.0188
+ref_medel_discont <- ifelse(ref_Cd <= 270, ref_Cd*0.013, 270*0.013+(ref_Cd-270)*0.042)
+ref_medel_quad <- (ref_Cd*-0.0043 + 0.000064*ref_Cd^2)
+ref_loss_data <- data.frame(ref_Cd,ref_medel_linear, ref_medel_discont, ref_medel_quad)
 ref_temp <- 5
+
+#ref_models <- melt(ref_loss_data, id = "ref_Cd")
+#ggplot(ref_models, aes(x=ref_Cd, y=value, colour=variable, group=variable)) +
+#  geom_line() + 
+#  xlab("")
 
 first_day <- min(kr_tab$date_full)
 last_day <- max(kr_tab$date_full)
 days_full <- round(as.numeric(difftime(last_day, first_day, units="days")+1))
-actual_temp <- c(10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,2,1,1,2,6,5,6,7,8,10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,5,4,5,6,7,6,5,4,4,4,5,5,5,4,4,3,2,3,3,4,4,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,5,6,7,8,8,8,8,7,6,7,6,5,6,5,4,3,3,2,2)
-if(length(actual_temp) == 0) temp <- rep(ref_temp, days_full) else temp <- actual_temp[1:days_full]
 
-kr_tab <- data.frame(kr_tab, temp)
+# Create temperature series to test the model on
+## This should be updated with actual temperature series from these years!
+random_16 <- runif(days_full, min =-4, max=4)
+random_17 <- runif(days_full, min =-4, max=3)
+random_18 <- runif(days_full, min =-3, max=4)
+random_19 <- runif(days_full, min =-4, max=4)
+random_20 <- runif(days_full, min =-5, max=3)
+day_drop_1 <- seq(0, length=days_full, by=0.1)
+day_drop_2 <- seq(0, length=days_full, by=0.11)
+#yr2016 <- c(10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,2,1,1,2,6,5,6,7,8,10,8,8,8,7,9,7,8,9,8,7,6,7,6,6,6,7,8,8,7,6,6,6,7,6,5,4,4,5,5,6,5,4,3,4,5,6,5,4,3,3,3,5,4,5,6,7,6,5,4,4,4,5,5,5,4,4,3,2,3,3,4,4,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,3,2,1,1,2,6,5,6,7,8,5,4,5,6,7,5,6,7,8,8,8,8,7,6,7,6,5,6,5,4,3,3,2,2)
+yr2016 <- 15 - random_16 - day_drop_1
+yr2017 <- 16 - random_17 - day_drop_2
+yr2018 <- 15 - random_18 - day_drop_2
+yr2019 <- 14 - random_19 - day_drop_1
+yr2020 <- 15 - random_20 - day_drop_1
+actual_temp <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
 
-#####################################
+# Data frame with all the base price parameters, and temperature
+# kr_tab <- data.frame(kr_tab, temp)
+
+###############################################
 #
 # Fuzzy loss model
+#
+# Guessing how much loss relative to 'normal'
+#  the farmer can expect given harvest and 
+#  clamp conditions
+#
+###############################################
 
 sets_options("universe", seq(1, 100, 0.5))
 
@@ -139,7 +188,13 @@ rules <- set(
 
 model <- fuzzy_system(variables, rules)
 
-#####################################
+###############################################
+#
+# Shiny user interface
+#
+# Determining inputs and viewing outputs
+#
+###############################################
 
 ui <- fluidPage(
   #  setBackgroundColor(
@@ -174,24 +229,41 @@ ui <- fluidPage(
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
-                   h4("Harvest"),
-                   dateInput("harvest_date","Harvest date",value = "2020-10-01"),
+                   h4("HARVEST"),
+                   dateInput("harvest_date","Harvest date",value = "2021-11-15"),
                    sliderInput("late_moisture", "Moisture late in the season, as percent of ideal", min=0, max=200, value=100),
                    sliderInput("harvester_cleaning", "Rotor speed", min=0, max=100, value=40)
+                 ),
+                 mainPanel(
+                   plotly::plotlyOutput("temp_graph")
                  ),
                  style = 'padding-left:15px'
                ),
                fluidRow(
                  sidebarPanel(
-                   h4("Storage"),
+                   h4("STORAGE"),
                    sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
-                   dateInput("cover_date", "Date of cover with TopTex", value="2021-01-01")
+                   dateInput("cover_date", "Date of cover with TopTex", value="2021-12-01"),
+                   h4("Temperature model"),
+                   selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
+                   selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3)),
+                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5),
+                   h4("Loss model"),
+                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3))
                  ),
                  mainPanel(
                    plotly::plotlyOutput("loss_Cd")
                  ),
                  style = 'padding-left:15px'
                )
+               #,
+               #fluidRow(
+              #   sidebarPanel(
+               #    h4("Loss model"),
+              #     selectInput("loss_model","Loss model", choices = list("Linear"=1, "Discontinuous"=2,"Quadratic"=3))
+               #  ),
+              #   style = 'padding-left:15px'
+               #)
              )
     ),
     tabPanel("Delivery and Payment", fluid = T,
@@ -199,7 +271,7 @@ ui <- fluidPage(
                fluidRow(
                  sidebarPanel(
                    h4("Delivery"),
-                   dateInput("delivery_date","Delivery date",value = "2020-10-15"),
+                   dateInput("delivery_date","Delivery date",value = "2022-01-15"),
                    sliderInput("delivery_distance","Distance to deliver (mil)",min=1,max=20,step=0.1,value=5),
                    sliderInput("delivery_cost","Cost for field",min=1000,max=200000,value=5000),
                    sliderInput("delivery_loads", "Number of loads from field", min=1, max=200, value=10)
@@ -278,6 +350,16 @@ ui <- fluidPage(
   )
 )
 
+# shinyApp(ui=ui, server=server)
+
+
+###############################################
+#
+# Shiny server 
+# 
+# Where the calculations are run
+#
+###############################################
 
 server <- function(input, output, session){
   
@@ -294,8 +376,46 @@ server <- function(input, output, session){
     root_harvest_tab
   })
   
-  # Plot of sugar loss  
+  temp_tab <- reactive({
+    temp_air <- actual_temp[,input$temp_air_yr]
+    
+    ref_temp <- input$ref_temp
+    
+    temp_clamp_model <- input$temp_clamp_model
+    
+    ## basic => 3 day weighted lag, and min temp = ref temp.
+    if(temp_clamp_model == 1){
+      temp_clamp <- temp_air
+      temp_clamp <- WMA(temp_clamp,n=3,wts=c(0.2,0.3,0.5))
+      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-(1:2)])
+      temp_clamp <- replace(temp_clamp, temp_clamp < ref_temp, ref_temp)
+    }
+    ## min_ref => min temp = ref_temp
+    if(temp_clamp_model == 2){
+      temp_clamp <- temp_air
+      temp_clamp <- replace(temp_clamp, temp_clamp < ref_temp, ref_temp)
+    }
+    ## air => clamp temp = air temp
+    if(temp_clamp_model == 3){
+      temp_clamp <- temp_air
+    }
+    
+    temp_tab <- data.frame(date_full, temp_air, temp_clamp)
+    
+    temp_tab
+  })
   
+  # Plot of temperatures
+  output$temp_graph <- plotly::renderPlotly({
+    
+    ggplot(temp_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = temp_clamp), color = "darkred") + 
+      geom_line(aes(y = temp_air), color="steelblue", linetype="twodash") +
+      ylab("Temperature (C)") + 
+      xlab("Date")
+  })
+  
+  # Plot of sugar loss
   output$loss_Cd <- plotly::renderPlotly({
     data_clamp_size <- ((input$clamp_size - 7)*50)
     data_late_moisture <- (input$late_moisture * 0.5)
@@ -304,6 +424,10 @@ server <- function(input, output, session){
                                              harvester_cleaning = input$harvester_cleaning, 
                                              late_moisture = data_late_moisture,
                                              variety  = input$variety_hardness))
+    
+    if(input$loss_model == 1) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_discont 
+    if(input$loss_model == 2) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_linear 
+    if(input$loss_model == 3) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_quad
     
     factor <- (gset_defuzzify(example.1, "centroid")/100+0.5)
     ref_loss_data$actual <- ref_loss_data$ref_medel*factor
@@ -355,7 +479,9 @@ server <- function(input, output, session){
   para_tab_factor <- reactiveVal()
     
   price_tab = reactive({
-    pris_tab <- kr_tab
+    temp_tab_p <- temp_tab()
+    temp_clamp_p <- temp_tab_p$temp_clamp
+    pris_tab <- rbind(kr_tab, temp_clamp_p)
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     cover_date <- as.POSIXct(input$cover_date, tz = "UTC", format = "%Y-%m-%d")
@@ -383,7 +509,7 @@ server <- function(input, output, session){
     days_h_s <- round(as.numeric(difftime(delivery_date, harvest_date, units="days")+1))
     days_p_h <- round(as.numeric(difftime(last_day, harvest_date, units="days")+1))
     #date_h_s <- seq(as.Date(harvest_date, tz = "UTC", format = "%Y-%m-%d"), length.out = days_h_S, by = "1 day")
-    pris_tab$cum_temp <- c(rep(0, (days_full - days_p_h)), cumsum(temp[which(pris_tab$date_full>=harvest_date)]))
+    pris_tab$cum_temp <- c(rep(0, (days_full - days_p_h)), cumsum(temp_clamp_p[which(pris_tab$date_full>=harvest_date)]))
     pris_tab$cum_percent_loss <- (pris_tab$cum_temp*0.0128 + 0.00002*pris_tab$cum_temp^2)*factor
     cum_percent_loss_max <- max(pris_tab$cum_percent_loss[which(pris_tab$date_full<=delivery_date)])
     pris_tab$cum_sug <- pol + pol*(cum_percent_loss_max/100) - (pris_tab$cum_percent_loss/100)*pol
@@ -421,7 +547,7 @@ server <- function(input, output, session){
     pris_tab$pris_field <- pris_tab$pris_ha*field_size
     
     # Summary table data
-    summary_tab_show <- c("date_full", "temp", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","pris_base_clean","pris_bonus_clean","pris_clean")
+    summary_tab_show <- c("date_full", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","pris_base_clean","pris_bonus_clean","pris_clean")
     if("DE" %in% summary_tab_show_input) summary_tab_show <- c(summary_tab_show, "pris_base_delivered","pris_bonus_delivered","pris_delivered")
     if("HA" %in% summary_tab_show_input) summary_tab_show <- c(summary_tab_show, "pris_base_ha","pris_bonus_ha","pris_ha")
     if("FI" %in% summary_tab_show_input) summary_tab_show <- c(summary_tab_show, "pris_base_field","pris_bonus_field","pris_field")
@@ -435,7 +561,7 @@ server <- function(input, output, session){
     
     summary_graph_temp(
       ggplot(summary_tab) + 
-        #geom_bar(aes(x=date, weight = temp)) +
+        #geom_bar(aes(x=date, weight = temp_clamp_p)) +
         geom_line(aes(x=date_full, y=cum_temp, color = "Cum. temperature")) + 
         geom_vline(xintercept = as.POSIXct(delivery_date), linetype="dotted") +
         geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
@@ -667,6 +793,12 @@ server <- function(input, output, session){
   
 }
 
+###############################################
+#
+# Run the model
+#
+###############################################
+
 shinyApp(ui=ui, server=server)
 
 
@@ -680,9 +812,9 @@ shinyApp(ui=ui, server=server)
 #
 ####################################################################
 
-harvest_date <- "2020-10-01"
-delivery_date <- "2020-12-25"
-cover_date <- "2020-11-15"
+harvest_date <- "2021-10-01"
+delivery_date <- "2021-12-25"
+cover_date <- "2021-11-15"
 field_size <- 100
 root_yield <-100
 delivery_distance <- 5
@@ -703,3 +835,4 @@ data_restrict <- F
 
 input <- data.frame(harvest_date, delivery_date, cover_date, root_yield, field_size, delivery_distance, delivery_cost, delivery_loads,
                     ref_temp, pol, clamp_size, moisture, factor, renhet, vol, price, data_restrict)
+
