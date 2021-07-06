@@ -224,7 +224,7 @@ ui <- fluidPage(
                    dateInput("cover_date", "Date of cover with TopTex", value="2021-12-01"),
                    h4("Temperature model"),
                    selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
-                   selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3)),
+                   selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3, "Ventilated" = 4)),
                    sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
                    sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5),
                    actionButton("help_storage", "?")
@@ -370,7 +370,8 @@ server <- function(input, output, session){
       temp_clamp <- temp_air
       temp_clamp <- temp_clamp * temp_clamp_size
       temp_clamp <- WMA(temp_clamp,n=3,wts=c(0.2,0.3,0.5))
-      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-(1:2)])
+      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-1])
+      temp_clamp <- temp_clamp[1:(length(temp_clamp)-1)]
       temp_clamp <- replace(temp_clamp, temp_clamp < temp_ref, temp_ref)
     }
     ## min_ref => min temp = ref_temp
@@ -383,6 +384,16 @@ server <- function(input, output, session){
     if(temp_clamp_model == 3){
       temp_clamp <- temp_air
       temp_clamp <- temp_clamp * temp_clamp_size
+    }
+    ## ventilation
+    if(temp_clamp_model == 4){
+      temp_clamp <- temp_air
+      temp_clamp <- temp_clamp * temp_clamp_size
+      temp_clamp <- WMA(temp_clamp,n=3,wts=c(0.2,0.3,0.5))
+      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-1])
+      temp_clamp <- temp_clamp[1:(length(temp_clamp)-1)]
+      temp_clamp <- pmin(temp_clamp, temp_air)
+      temp_clamp <- replace(temp_clamp, temp_clamp < temp_ref, temp_ref)
     }
     
     # Full table of daily temperatures compilation
