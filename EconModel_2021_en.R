@@ -2,7 +2,7 @@
 #
 # Swedish sugar beets economic model
 # Will English, 2021-03-18
-# FIXES: Per truck, per ha into the payment schedule. 
+# FIXES: Per truck, per ha into the payment schedule. Add in price model from any year
 #
 ########################################
 
@@ -191,9 +191,9 @@ ui <- fluidPage(
                ),
                fluidRow(
                  sidebarPanel(
-                   sliderInput("root_yield","Root yield (t/ha)", min=40, max=120, step = 1, value = 86),
+                   sliderInput("root_yield","Root yield (t/ha) - at delivery", min=40, max=120, step = 1, value = 86),
                    sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
-                   sliderInput("late_potent","Late season growth potential (%)", min=50, max=100, step=5, value=100)
+                   sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100)
                  ),
                  mainPanel(
                    tableOutput("root_harvest_tab")
@@ -204,21 +204,20 @@ ui <- fluidPage(
     ),
     tabPanel("HARVEST", fluid = T,
             sidebarLayout(
-                 sidebarPanel(
+              sidebarPanel(
                    dateInput("harvest_date","Harvest date",value = "2021-11-15"),
-                   sliderInput("late_moisture", "Moisture late in the season, as percent of ideal", min=0, max=200, value=100),
+                   sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
                    sliderInput("harvester_cleaning", "Rotor speed", min=0, max=100, value=40),
-                   h4("Loss model"),
-                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3)),
                    actionButton("help_harvest", "?")
-                   ),
-                 mainPanel(
-                   plotly::plotlyOutput("loss_Cd")
-                   )
+              ),
+              mainPanel(
+                
+              )
             )
     ),
     tabPanel("STORAGE", fluid = T,
              sidebarLayout(
+               fluidRow(
                  sidebarPanel(
                    dateInput("cover_date", "Date of cover with TopTex", value="2021-12-01"),
                    h4("Temperature model"),
@@ -226,11 +225,25 @@ ui <- fluidPage(
                    selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3, "Ventilated" = 4)),
                    sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
                    sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5),
-                   actionButton("help_storage", "?")
+                   actionButton("help_storage_temp", "?")
                  ),
                  mainPanel(
                    plotly::plotlyOutput("temp_graph")
-                 )
+                 ),
+                 style = 'padding-left:15px'
+               ),
+               fluidRow(
+                 sidebarPanel(
+                   h4("Loss model"),
+                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3)),
+                   sliderInput("mass_loss","Mass loss per degree day", min=0, max=0.05, value=0.01),
+                   actionButton("help_storage_loss", "?")
+                 ),
+                 mainPanel(
+                   plotly::plotlyOutput("loss_Cd")
+                 ),
+                 style = 'padding-left:15px'
+               )
             )
     ),
     tabPanel("DELIVERY & PAYMENT", fluid = T,
@@ -345,7 +358,7 @@ server <- function(input, output, session){
     root_harvest_tab()
   })
 
-  # LOCATION TABLE
+  # LOCATION OF BEETS TABLE
   loc_tab <- reactive({
 
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
@@ -361,8 +374,16 @@ server <- function(input, output, session){
     
     loc_tab
   })
+
+  # LATE SEASON GROWTH
+  LSG_tab <- reactive({
+    LSG_pot <- input$late_potent
     
-  # TEMP TABLE. Table of daily temperature given the chosen inputs
+    
+    
+  })
+      
+  # CLMAP TEMP TABLE. Table of daily temperature inthe clamp given the chosen inputs
   
   temp_tab <- reactive({
     # Air temp for given period taken from contant table
@@ -416,7 +437,7 @@ server <- function(input, output, session){
     temp_tab
   })
   
-  # LOSS FACTOR
+  # SUGAR LOSS FACTOR
   # Get model factor
   factor <- reactive({
     data_late_moisture <- (input$late_moisture * 0.5)
@@ -430,7 +451,7 @@ server <- function(input, output, session){
     factor
   })
   
-  # LOSS MODEL TABLE
+  # SUGAR LOSS MODEL TABLE
   
   loss_tab <- reactive({
  
@@ -445,6 +466,22 @@ server <- function(input, output, session){
     
     #Write table
     ref_loss_data
+  })
+  
+  # MASS LOSS
+  
+  mass_loss_tab <- reactive({
+    
+    mass_loss_p <- input$mass_loss
+    
+    cum_temp <- seq(1,1000)
+    
+    cum_mass_loss <- mass_loss_p * cum_temp
+    
+    mass_loss_tab <- data.frame(cum_temp, cum_mass_loss)
+    
+    mass_loss_tab
+    
   })
   
   # Delivery cost table
@@ -480,8 +517,8 @@ server <- function(input, output, session){
     # input from all previous tables
     temp_tab_p <- data.frame(temp_tab())
     loss_tab_p <- data.frame(loss_tab())
+    mass_loss_tab_p <- data.frame(mass_loss_tab())
     loss_tab_p <- loss_tab_p[,c("cum_temp","actual")]
-    root_harvest_tab_p <- data.frame(root_harvest_tab())
     loc_tab_p <- data.frame(loc_tab())
     
     # input from required inputs
@@ -494,6 +531,7 @@ server <- function(input, output, session){
     root_yield <- input$root_yield
     vol <- input$vol
     field_size <- input$field_size
+    root_harvest <- root_yield*field_size
     
     # calculate a few key parameters
     days_h_s <- round(as.numeric(difftime(delivery_date, harvest_date, units="days")+1))
@@ -517,6 +555,11 @@ server <- function(input, output, session){
     cum_percent_loss_max <- max(price_tab$cum_percent_loss[which(price_tab$date_full<=delivery_date)])
     price_tab$cum_sug <- pol + pol*(cum_percent_loss_max/100) - (price_tab$cum_percent_loss/100)*pol
     price_tab$pol_factor <- (price_tab$cum_sug - ref_pol*100)*kr_pol
+    
+    ## Mass loss for given temp
+    price_tab <- merge(price_tab, mass_loss_tab_p, by="cum_temp")
+    cum_mass_loss_max <- max(price_tab$cum_mass_loss[which(price_tab$date_full<=delivery_date)])
+    price_tab$cum_mass <- root_harvest + root_harvest*(cum_mass_loss_max/100) - (price_tab$cum_mass_loss/100)*root_harvest
     
     #TT bonus
     price_tab$price_TT[price_tab$date_full < as.POSIXct(cover_date)+7] <- 0
@@ -567,7 +610,7 @@ server <- function(input, output, session){
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     
     # Define summary table - columns
-    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","price_base_clean","price_bonus_clean","price_clean")
+    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_sug", "pol_factor","price_base_clean","price_bonus_clean","price_clean","cum_mass")
     if("DE" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_delivered","price_bonus_delivered","price_delivered")
     if("HA" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_ha","price_bonus_ha","price_ha")
     if("FI" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_field","price_bonus_field","price_field")
@@ -599,7 +642,7 @@ server <- function(input, output, session){
     # input from required inputs
     summary_tab_cols <- input$summary_tab_show
     
-    summary_tab_names <- c("Date", "Location", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
+    summary_tab_names <- c("Date", "Location", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol", "Pol factor","Base price - clean tn","Bonus - clean tn","Payment - clean tn","Beet mass")
     if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
     if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
     if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
@@ -731,9 +774,26 @@ server <- function(input, output, session){
     ))
   })
   
-  observeEvent(input$help_storage, {
+  observeEvent(input$help_storage_temp, {
     showModal(modalDialog(
-      title = "Storage",
+      title = "Storage temperature model",
+      "Storage conditions determine the clamp temperature in relation to the air temperature.", br(), br(),
+      "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", br(), br(),
+      "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature -",
+      "a wider clamp will build more heat than a thinner one.", 
+      "At 7m, this multiplication factor is 1.00. At 9m, it is 1.10",br(), br(),
+      "The difference years give historical mean temperatures for Borgeby.",br(), br(),
+      "The difference Clamp Temp Models define different relationships between clamp temperature and air temperature.",
+      "For models with a temperature floor - a minimum temperature the clamp can go to - Temperature Floor sets this.",br(), br(),
+      "Sources: just general observation",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$help_storage_loss, {
+    showModal(modalDialog(
+      title = "Storage loss model",
       "Storage conditions determine the clamp temperature in relation to the air temperature.", br(), br(),
       "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", br(), br(),
       "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature -",
