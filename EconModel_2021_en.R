@@ -185,15 +185,20 @@ ui <- fluidPage(
                fluidRow(
                  sidebarPanel(
                    selectInput("variety_type","Variety type", choices = list("Average"=2, "Weak"=1,"Strong"=3)),
-                   sliderInput("variety_hardness", "Variety hardness", min=0, max=100, value = 50)
-                   ),                 
+                   sliderInput("variety_hardness", "Variety hardness", min=0, max=100, value = 50),
+                   sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100),
+                   actionButton("help_field", "?")
+                   ),
+                 mainPanel(
+                   plotly::plotlyOutput("LSG_chart")
+                 ),
                  style = 'padding-left:15px'
                ),
                fluidRow(
                  sidebarPanel(
+
                    sliderInput("root_yield","Root yield (t/ha) - at delivery", min=40, max=120, step = 1, value = 86),
-                   sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
-                   sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100)
+                   sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10)
                  ),
                  mainPanel(
                    tableOutput("root_harvest_tab")
@@ -208,6 +213,7 @@ ui <- fluidPage(
                    dateInput("harvest_date","Harvest date",value = "2021-11-15"),
                    sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
                    sliderInput("harvester_cleaning", "Rotor speed", min=0, max=100, value=40),
+                   sliderInput("root_tip_breakage","Root tip breakage (cm)", min=0, max=10, value=2),
                    actionButton("help_harvest", "?")
               ),
               mainPanel(
@@ -295,7 +301,7 @@ ui <- fluidPage(
              ),
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_price")),
-               column(6,)
+               column(6,plotly::plotlyOutput("summary_graph_mass"))
              )
     ) #,
     #tabPanel("Payment Comparison", fluid = T,
@@ -368,7 +374,7 @@ server <- function(input, output, session){
     # Full table of location of beets
     loc_tab <- data.frame(date_full, location)
     
-    loc_tab$location[which(loc_tab$date_full < harvest_date)] <- "field"
+    loc_tab$location[which(loc_tab$date_full <= harvest_date)] <- "field"
     loc_tab$location[which(loc_tab$date_full == harvest_date)] <- "harvest"
     loc_tab$location[which(loc_tab$date_full >= delivery_date)] <- "delivered"
     
@@ -379,11 +385,32 @@ server <- function(input, output, session){
   LSG_tab <- reactive({
     LSG_pot <- input$late_potent
     
+    LSG_pol <- rep(0.02, length(date_full))
+
+    LSG_root_day <- seq(1,length(date_full)+5)
+    LSG_root_daily <- 1.5735e-06*LSG_root_day^2-2.8177e-04*LSG_root_day+0.01244
+    LSG_root_daily <- c(0.01244,LSG_root_daily)
+    LSG_root_daily[which(LSG_root_daily <= 0)] <- 0
+    LSG_root_daily[100:length(date_full)] <-0
+    LSG_root_daily <- LSG_root_daily[1:length(date_full)]
+    LSG_root_daily <- LSG_root_daily*LSG_pot
     
+    LSG_root_cum <- cumsum(LSG_root_daily)
+    
+    LSG_tab <- data.frame(date_full,LSG_root_daily,LSG_root_cum,LSG_pol)
+    
+    LSG_tab
     
   })
+  
+  output$LSG_chart <- plotly::renderPlotly({
+     ggplot(LSG_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = LSG_root_daily), color = "darkred") + 
+      ylab("Daily growth (%)") + 
+      xlab("Date")
+    })
       
-  # CLMAP TEMP TABLE. Table of daily temperature inthe clamp given the chosen inputs
+  # CLAMP TEMP TABLE. Table of daily temperature inthe clamp given the chosen inputs
   
   temp_tab <- reactive({
     # Air temp for given period taken from contant table
@@ -475,6 +502,7 @@ server <- function(input, output, session){
     mass_loss_p <- input$mass_loss
     
     cum_temp <- seq(1,1000)
+    cum_temp <- c(0,cum_temp)
     
     cum_mass_loss <- mass_loss_p * cum_temp
     
@@ -520,6 +548,7 @@ server <- function(input, output, session){
     mass_loss_tab_p <- data.frame(mass_loss_tab())
     loss_tab_p <- loss_tab_p[,c("cum_temp","actual")]
     loc_tab_p <- data.frame(loc_tab())
+    LSG_tab_p <- data.frame(LSG_tab())
     
     # input from required inputs
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
@@ -561,6 +590,13 @@ server <- function(input, output, session){
     cum_mass_loss_max <- max(price_tab$cum_mass_loss[which(price_tab$date_full<=delivery_date)])
     price_tab$cum_mass <- root_harvest + root_harvest*(cum_mass_loss_max/100) - (price_tab$cum_mass_loss/100)*root_harvest
     
+    ## Mass gain under late season growth
+    price_tab <- merge(price_tab, LSG_tab_p, by="date_full")
+    root_mass_harvest <- price_tab$cum_mass[which(price_tab$date_full == harvest_date)]
+    LSG_root_cum_max <- price_tab$LSG_root_cum[which(price_tab$date_full == harvest_date)]
+    price_tab$cum_mass[which(price_tab$date_full < harvest_date)] <-
+      root_mass_harvest - root_mass_harvest*(LSG_root_cum_max/100) + root_mass_harvest*(price_tab$LSG_root_cum/100)
+        
     #TT bonus
     price_tab$price_TT[price_tab$date_full < as.POSIXct(cover_date)+7] <- 0
     
@@ -709,7 +745,6 @@ server <- function(input, output, session){
   
   
   output$summary_graph_temp <- plotly::renderPlotly({
-  
     ggplot(summary_tab(), aes(x=date_full)) + 
       geom_line(aes(y=cum_temp, color = "Cum. temperature")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
@@ -721,7 +756,6 @@ server <- function(input, output, session){
       xlab("Date") +
       labs(title = "Temperature") +
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-    
   })
   
   output$summary_graph_loss <- plotly::renderPlotly({
@@ -756,8 +790,33 @@ server <- function(input, output, session){
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
+  output$summary_graph_mass <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y=cum_mass, color = "Cum. mass")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c("Cum. mass"),
+                          values = c("Cum. mass"="red3")) +
+      ylab("Cumulative mass (tn)") + 
+      xlab("Date") +
+      labs(title = "Mass of beet") +
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  
   ###############################
   # HELP!
+
+  observeEvent(input$help_field, {
+    showModal(modalDialog(
+      title = "In the field",
+      "All varieties should have the same late-season growth potential, measured as a daily percent increase in biomass", br(), br(),
+      "Late season growth potential is determined by issues like disease or water stress.", br(), br(),
+      "Sources: Joakim",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
   
   observeEvent(input$help_harvest, {
     showModal(modalDialog(
