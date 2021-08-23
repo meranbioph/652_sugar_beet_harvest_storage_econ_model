@@ -2,67 +2,17 @@
 #
 # Swedish sugar beets economic model
 # Will English, 2021-03-18
-# FIXES: Per truck, per ha into the payment schedule. Add in price model from any year
+# FIXES: Date in Summary Table. Per truck, per ha into the payment schedule.
 #
 ########################################
 
+library(shiny)
+library(plotly)
+library(sets)
+library(ggplot2)
+library(reshape2) 
+library(TTR)
 
-###############################################
-#
-# Setup
-#
-###############################################
-
-{
- # -------------------------------------------
- snapshot_date = "2021-03-18"
- options("repos" = paste0("https://mran.revolutionanalytics.com/snapshot/", snapshot_date))
- # -------------------------------------------
-
- # -------------------------------------------
- # sink options
- options(width = 150)
- # rJava memory option
- options(java.parameters = "-Xmx8000m")
- # -------------------------------------------
-
- # R packages
- # -------------------------------------------
- Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", 
-                       "ggplot2_3.3.3", "reshape2_1.4.4", "TTR_0.24.2")
- path_Rpackages = "C:/R packages_404"
- # -------------------------------------------
- 
- # -------------------------------------------
- sessionInfo()
- # -------------------------------------------
-
- # version check and load packages
- # -------------------------------------------
- # R version check
- if(sessionInfo()$R.version$version.string != "R version 4.0.4 (2021-02-15)") stop("R.version must be 4.0.4 (2021-02-15)")
-
- # install packages
- Rpack = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[1])
- Rpack_version = sapply(strsplit(Rpackages_version, "_", fixed = T), FUN = function(x) x[2])
- if(!all(Rpack %in% list.files(path_Rpackages))){
-   loadRpackages <- Rpack[!Rpack %in% list.files(path_Rpackages)]
-   for(i in loadRpackages) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
- }
-
- # load packages
- for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
-
- # Version check
- loadedPackagesAndVersions = sapply(sessionInfo()$otherPkgs, FUN = function(x) paste(x$Package, x$Version, sep = "_"))
- Rpack = Rpack[!Rpackages_version %in% loadedPackagesAndVersions]
- if(length(Rpack) > 0){
-   for(i in rev(Rpack)) try(eval(parse(text = paste0("detach('package:", i, "', unload = T)"))), silent = T)
-   for(i in Rpack) install.packages(i, lib = path_Rpackages, repos = options("repos"), dependencies = T)
-   for(i in Rpack) eval(parse(text = paste0("library(", i, ", lib.loc = '", path_Rpackages, "')")))
- }
-}
- 
 ###############################################
 # ---------------------------------------------
 # THE MODEL
@@ -186,46 +136,46 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel("IN THE FIELD", fluid = T,
              sidebarLayout(
-                 sidebarPanel(
-                   sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
-                   h4("VARIETY"),
-                   selectInput("variety_type","Variety type", choices = list("Normal"=2, "High root yield"=1,"High sugar content"=3)),
-                   sliderInput("variety_hardness", "Variety hardness", min=0, max=100, value = 50),
-                   h4("LATE SEASON GROWTH POTENTIAL"),
-                   sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100),
-                   actionButton("help_field", "?")
-                   ),
-                 mainPanel(
-                   plotly::plotlyOutput("LSG_chart")
-                 )
+               sidebarPanel(
+                 sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
+                 h4("VARIETY"),
+                 selectInput("variety_type","Variety type", choices = list("Normal"=2, "High root yield"=1,"High sugar content"=3)),
+                 sliderInput("variety_hardness", "Variety hardness", min=0, max=100, value = 50),
+                 h4("LATE SEASON GROWTH POTENTIAL"),
+                 sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100),
+                 actionButton("help_field", "?")
+               ),
+               mainPanel(
+                 plotly::plotlyOutput("LSG_chart")
                )
+             )
     ),
     tabPanel("HARVEST", fluid = T,
-            sidebarLayout(
-                fluidRow(
-                  sidebarPanel(
+             sidebarLayout(
+               fluidRow(
+                 sidebarPanel(
                    dateInput("harvest_date","Harvest date",value = "2021-11-15"),
                    sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
                    sliderInput("harvester_cleaning", "Cleaning intensity", min=0, max=100, value=40),
                    sliderInput("root_tip_break_perc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25),
                    actionButton("help_harvest", "?")
-                ),
-                mainPanel(
-                  tableOutput("summary_harvest_loss")
-                ),
-                style = 'padding-left:15px'
-                ),
-                fluidRow(
-                  sidebarPanel(
-                    sliderInput("root_yield","Root yield (t/ha) - at delivery", min=40, max=120, step = 1, value = 86),
-                    
-                  ),
-                  mainPanel(
-                    tableOutput("root_harvest_tab")
-                  ),
-                  style = 'padding-left:15px'
-                )
-              )
+                 ),
+                 mainPanel(
+                   tableOutput("summary_harvest_loss")
+                 ),
+                 style = 'padding-left:15px'
+               ),
+               fluidRow(
+                 sidebarPanel(
+                   sliderInput("root_yield","Root yield (t/ha) - at delivery", min=40, max=120, step = 1, value = 86),
+                   
+                 ),
+                 mainPanel(
+                   tableOutput("root_harvest_tab")
+                 ),
+                 style = 'padding-left:15px'
+               )
+             )
     ),
     tabPanel("STORAGE", fluid = T,
              sidebarLayout(
@@ -256,7 +206,7 @@ ui <- fluidPage(
                  ),
                  style = 'padding-left:15px'
                )
-            )
+             )
     ),
     tabPanel("DELIVERY & PAYMENT", fluid = T,
              sidebarLayout(
@@ -294,10 +244,10 @@ ui <- fluidPage(
                column(3, checkboxInput("data_restrict_start","Restrict data start date to harvest date?"),
                       checkboxInput("data_restrict_end","Restrict data end date to delivery date?"),
                       style = 'padding-left:15px'
-                      ),
+               ),
                column(3,checkboxGroupInput("summary_tab_show","Show:",choices=c("Per ha"="HA", "Per field"="FI", "Per tonne clean" = "CL"," Per tonne delivered"="DE"),selected = )),
                column(6,)
-            ),
+             ),
              fluidRow(column(12,tableOutput("summary_tab_output")))
     ),
     tabPanel("GRAPHS - PRODUCTION", fluid = T,
@@ -393,10 +343,10 @@ server <- function(input, output, session){
   output$root_harvest_tab <- renderTable({
     root_harvest_tab()
   }, rownames = T)
-
+  
   # LOCATION OF BEETS TABLE
   loc_tab <- reactive({
-
+    
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     location <- "clamp"
@@ -410,13 +360,13 @@ server <- function(input, output, session){
     
     loc_tab
   })
-
+  
   # LATE SEASON GROWTH
   LSG_tab <- reactive({
     LSG_pot <- input$late_potent
     
     LSG_pol <- rep(0.02, length(date_full))
-
+    
     LSG_root_day <- seq(1,length(date_full)+5)
     LSG_root_daily <- 1.5735e-06*LSG_root_day^2-2.8177e-04*LSG_root_day+0.01244
     LSG_root_daily <- c(0.01244,LSG_root_daily)
@@ -435,11 +385,11 @@ server <- function(input, output, session){
   })
   
   output$LSG_chart <- plotly::renderPlotly({
-     ggplot(LSG_tab(), aes(x=date_full)) + 
+    ggplot(LSG_tab(), aes(x=date_full)) + 
       geom_line(aes(y = LSG_root_daily), color = "darkred") + 
       ylab("Daily growth (%)") + 
       xlab("Date")
-    })
+  })
   
   # CLAMP TEMP TABLE. Table of daily temperature inthe clamp given the chosen inputs
   
@@ -501,8 +451,8 @@ server <- function(input, output, session){
     data_late_moisture <- (input$late_moisture * 0.5)
     
     example.1 <- fuzzy_inference(model, list(harvester_cleaning = input$harvester_cleaning, 
-                                           late_moisture = data_late_moisture,
-                                           variety  = input$variety_hardness))
+                                             late_moisture = data_late_moisture,
+                                             variety  = input$variety_hardness))
     # get the "damage factor"
     factor <- (gset_defuzzify(example.1, "centroid")/100+0.5)
     
@@ -512,12 +462,12 @@ server <- function(input, output, session){
   # SUGAR LOSS MODEL TABLE
   
   loss_tab <- reactive({
- 
+    
     # Write ref_medel series
     if(input$loss_model == 1) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_discont 
     if(input$loss_model == 2) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_linear 
     if(input$loss_model == 3) ref_loss_data$ref_medel <- ref_loss_data$ref_medel_quad
-
+    
     
     # Write actual loss rate as function of "damage factor"
     ref_loss_data$actual <- ref_loss_data$ref_medel*factor()
@@ -588,7 +538,7 @@ server <- function(input, output, session){
   )
   
   # FULL RESULTS TABLE
-
+  
   full_tab = reactive({
     # input from all previous tables
     temp_tab_p <- data.frame(temp_tab())
@@ -650,7 +600,7 @@ server <- function(input, output, session){
     #full_tab$cum_mass[which(full_tab$date_full < harvest_date)] <-
     #  root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100)
     full_tab$cum_mass <- ifelse(full_tab$date_full < harvest_date, 
-      root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100), full_tab$cum_mass)
+                                root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100), full_tab$cum_mass)
     
     
     ## Pol gain under late season growth
@@ -659,7 +609,7 @@ server <- function(input, output, session){
     #full_tab$cum_pol[which(full_tab$date_full < harvest_date)] <-
     #  pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100)
     full_tab$cum_pol <- ifelse(full_tab$date_full < harvest_date,
-      pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100),full_tab$cum_pol)    
+                               pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100),full_tab$cum_pol)    
     
     ## SUGAR YIELD
     full_tab$cum_sug <- full_tab$cum_pol/100*full_tab$cum_mass
@@ -688,19 +638,19 @@ server <- function(input, output, session){
     full_tab$price_base_ha <- full_tab$price_base_delivered*full_tab$cum_mass
     full_tab$price_bonus_ha <- full_tab$price_bonus_delivered*full_tab$cum_mass
     full_tab$price_ha <- full_tab$price_delivered*full_tab$cum_mass
-
+    
     # Field prices
     full_tab$price_base_field <- full_tab$price_base_ha*field_size
     full_tab$price_bonus_field <- full_tab$price_bonus_ha*field_size
     full_tab$price_field <- full_tab$price_ha*field_size
-
+    
     full_tab
     
-    })
-
+  })
+  
   # SUMMARY (VISUALISED) RESULTS
   ##!!! This should really just restrict the full results table within the parameters given.
-      
+  
   summary_tab = reactive({
     # input from required previous tables
     summary_tab <- data.frame(full_tab())
@@ -724,7 +674,7 @@ server <- function(input, output, session){
     if(summary_tab_end) last_day <- delivery_date
     summary_tab <- summary_tab[which(summary_tab$date_full >= first_day),]
     summary_tab <- summary_tab[which(summary_tab$date_full <= last_day),]
-
+    
     # Extract a little info from summary table for later graphing
     delivery_date <<- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     harvest_date <<- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
@@ -777,7 +727,7 @@ server <- function(input, output, session){
     
     summary_final_tab
     
-    })
+  })
   ###############
   # VISUALS
   
@@ -947,7 +897,7 @@ server <- function(input, output, session){
   
   ###############################
   # HELP!
-
+  
   observeEvent(input$help_field, {
     showModal(modalDialog(
       title = "In the field",
