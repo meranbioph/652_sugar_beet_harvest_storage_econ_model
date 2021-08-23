@@ -290,7 +290,7 @@ ui <- fluidPage(
                       checkboxInput("data_restrict_end","Restrict data end date to delivery date?"),
                       style = 'padding-left:15px'
                       ),
-               column(3,checkboxGroupInput("summary_tab_show","Show:",choices=c("Per tonne delivered"="DE", "Per ha"="HA", "Per field"="FI"),selected = )),
+               column(3,checkboxGroupInput("summary_tab_show","Show:",choices=c("Per ha"="HA", "Per field"="FI", "Per tonne clean" = "CL"," Per tonne delivered"="DE"),selected = )),
                column(6,)
             ),
              fluidRow(column(12,tableOutput("summary_tab_output")))
@@ -302,17 +302,17 @@ ui <- fluidPage(
              ),
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_mass")),
-               column(6,)
+               column(6,plotly::plotlyOutput("summary_graph_sug"))
              )
     ),
     tabPanel("GRAPHS - ECONOMY", fluid = T,
              fluidRow(
-               column(6,plotly::plotlyOutput("summary_graph_price")),
-               column(6,)
+               column(6,plotly::plotlyOutput("summary_graph_price_ha")),
+               column(6,plotly::plotlyOutput("summary_graph_price_fi"))
              ),
              fluidRow(
-               column(6,),
-               column(6,)
+               column(6,plotly::plotlyOutput("summary_graph_price_cl")),
+               column(6,plotly::plotlyOutput("summary_graph_price_de"))
              )
     )#,
     #tabPanel("Payment Comparison", fluid = T,
@@ -638,15 +638,20 @@ server <- function(input, output, session){
     root_mass_harvest <- full_tab$cum_mass[which(full_tab$date_full == harvest_date)] 
     root_mass_grown <- root_mass_harvest + harvest_loss
     LSG_root_cum_max <- full_tab$LSG_root_cum[which(full_tab$date_full == harvest_date)]
-    full_tab$cum_mass[which(full_tab$date_full < harvest_date)] <-
-      root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100)
+    #full_tab$cum_mass[which(full_tab$date_full < harvest_date)] <-
+    #  root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100)
+    full_tab$cum_mass <- ifelse(full_tab$date_full < harvest_date, 
+      root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100), full_tab$cum_mass)
+    
     
     ## Pol gain under late season growth
     pol_harvest <- full_tab$cum_pol[which(full_tab$date_full == harvest_date)]
     LSG_pol_cum_max <- full_tab$LSG_pol_cum[which(full_tab$date_full == harvest_date)]
-    full_tab$cum_pol[which(full_tab$date_full < harvest_date)] <-
-      pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100)
-        
+    #full_tab$cum_pol[which(full_tab$date_full < harvest_date)] <-
+    #  pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100)
+    full_tab$cum_pol <- ifelse(full_tab$date_full < harvest_date,
+      pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100),full_tab$cum_pol)    
+    
     ## SUGAR YIELD
     full_tab$cum_sug <- full_tab$cum_pol/100*full_tab$cum_mass
     
@@ -699,7 +704,8 @@ server <- function(input, output, session){
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     
     # Define summary table - columns
-    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_pol","cum_mass","cum_sug","price_base_clean","price_bonus_clean","price_clean")
+    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_pol","cum_mass","cum_sug")
+    if("CL" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_clean","price_bonus_clean","price_clean")
     if("DE" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_delivered","price_bonus_delivered","price_delivered")
     if("HA" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_ha","price_bonus_ha","price_ha")
     if("FI" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_field","price_bonus_field","price_field")
@@ -732,7 +738,8 @@ server <- function(input, output, session){
     # input from required inputs
     summary_tab_cols <- input$summary_tab_show
     
-    summary_tab_names <- c("Date", "Location", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol","Root Yield","Sugar Yield","Base price - clean tn","Bonus - clean tn","Payment - clean tn")
+    summary_tab_names <- c("Date", "Location", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol","Root Yield","Sugar Yield")
+    if("CL" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - clean tn","Bonus - clean tn","Payment - clean tn")
     if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
     if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
     if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
@@ -751,12 +758,12 @@ server <- function(input, output, session){
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     summary_final_tab <- data.frame(full_tab())
     summary_final_tab <- summary_final_tab[which(summary_final_tab$date_full == delivery_date),]
-    summary_final_tab <- matrix(summary_final_tab[c("price_base_delivered","price_bonus_delivered","price_delivered",
-                                                    "price_base_clean","price_bonus_clean","price_clean",
-                                                    "price_base_ha","price_bonus_ha","price_ha",
-                                                    "price_base_field","price_bonus_field","price_field")],
+    summary_final_tab <- matrix(summary_final_tab[c("price_base_ha","price_bonus_ha","price_ha",
+                                                    "price_base_field","price_bonus_field","price_field",
+                                                    "price_base_delivered","price_bonus_delivered","price_delivered",
+                                                    "price_base_clean","price_bonus_clean","price_clean")],
                                 byrow=T,nrow=4)
-    rownames(summary_final_tab) <- c("Tonne - delivered", "Tonne - clean", "Hectare", "Field")
+    rownames(summary_final_tab) <- c("Hectare", "Field","Tonne - delivered", "Tonne - clean")
     colnames(summary_final_tab) <- c("Base price","Bonuses","Total payment")
     
     summary_final_tab
@@ -829,8 +836,72 @@ server <- function(input, output, session){
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
-  output$summary_graph_price <- plotly::renderPlotly({
+  output$summary_graph_mass <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y=cum_mass, color = "Cum. mass")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c("Cum. mass"),
+                          values = c("Cum. mass"="red3")) +
+      ylab("Root yield (tn)") + 
+      xlab("Date") +
+      labs(title = "ROOT YIELD") +
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  output$summary_graph_sug <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y=cum_sug, color = "Cum. sug")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c("Cum. sug"),
+                          values = c("Cum. sug"="red3")) +
+      ylab("Sugar yield (tn)") + 
+      xlab("Date") +
+      labs(title = "SUGAR YIELD") +
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  output$summary_graph_price_ha <- plotly::renderPlotly({
+    ggplot(full_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = price_ha, colour = "Total payment")) +
+      geom_line(aes(y = price_base_ha, colour = "Base payment")) + 
+      geom_line(aes(y = price_bonus_ha, colour = "Bonus payment")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
+      scale_colour_manual("", 
+                          breaks = c("Total payment", "Base payment", "Bonus payment"),
+                          values = c("Total payment"="red3", "Base payment"="blue3", 
+                                     "Bonus payment"="green3")) +
+      ylab("Price (kr)") + 
+      xlab("Date") +
+      labs(title = "INCOME PER HECTARE") + 
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  output$summary_graph_price_fi <- plotly::renderPlotly({
+    ggplot(full_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = price_field, colour = "Total payment")) +
+      geom_line(aes(y = price_base_field, colour = "Base payment")) + 
+      geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
+      scale_colour_manual("", 
+                          breaks = c("Total payment", "Base payment", "Bonus payment"),
+                          values = c("Total payment"="red3", "Base payment"="blue3", 
+                                     "Bonus payment"="green3")) +
+      ylab("Price (kr)") + 
+      xlab("Date") +
+      labs(title = "INCOME PER FIELD") + 
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  output$summary_graph_price_cl <- plotly::renderPlotly({
+    ggplot(full_tab(), aes(x=date_full)) + 
       geom_line(aes(y = price_clean, colour = "Total payment")) +
       geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
       geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
@@ -843,24 +914,27 @@ server <- function(input, output, session){
                                      "Bonus payment"="green3")) +
       ylab("Price (kr)") + 
       xlab("Date") +
-      labs(title = "PRICE PER CLEAN TONNE") + 
+      labs(title = "INCOME PER CLEAN TONNE") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
-  output$summary_graph_mass <- plotly::renderPlotly({
-    ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=cum_mass, color = "Cum. mass")) +
+  output$summary_graph_price_de <- plotly::renderPlotly({
+    ggplot(full_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = price_delivered, colour = "Total payment")) +
+      geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
+      geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
-                          breaks = c("Cum. mass"),
-                          values = c("Cum. mass"="red3")) +
-      ylab("Cumulative mass (tn)") + 
+                          breaks = c("Total payment", "Base payment", "Bonus payment"),
+                          values = c("Total payment"="red3", "Base payment"="blue3", 
+                                     "Bonus payment"="green3")) +
+      ylab("Price (kr)") + 
       xlab("Date") +
-      labs(title = "ROOT MASS") +
+      labs(title = "INCOME PER DELIVERED TONNE") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
-  
   
   ###############################
   # HELP!
