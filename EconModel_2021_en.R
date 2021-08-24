@@ -203,7 +203,7 @@ ui <- fluidPage(
                    sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100),
                    ),
                  mainPanel(
-                   plotly::plotlyOutput("LSG_chart")
+                   column(12,plotly::plotlyOutput("LSG_chart"), style = "margin-top: 175px")
                  )
                )
     ),
@@ -215,28 +215,27 @@ ui <- fluidPage(
                     br(),
                     fluidRow(
                       column(10, h4("HARVEST CONDITIONS")),
-                      column(2,actionButton("help_harvest_conditions", "?"))
+                      column(2, actionButton("help_harvest_conditions", "?"))
                     ),
                     sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
                     sliderInput("harvester_cleaning", "Cleaning intensity", min=0, max=100, value=40),
                     sliderInput("root_tip_break_perc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25),
-                ),
-                mainPanel(
-                  tableOutput("summary_harvest_loss")
-                ),
-                style = "padding-left:15px"
+                    ),
+                  mainPanel(
+                    column(12, h4("Harvest loss"),tableOutput("summary_harvest_loss"), style = "margin-top: 375px")
+                    ),
+                  style = "padding-left:15px"
                 ),
                 fluidRow(
                   sidebarPanel(
                     fluidRow(
                       column(10, h4("ROOT YIELD")),
-                      column(2,actionButton("help_harvest_yield", "?"))
+                      column(2, actionButton("help_harvest_yield", "?"))
                     ),
-                    sliderInput("root_yield","Root yield (t/ha) - at delivery", min=40, max=120, step = 1, value = 86),
-                    
+                    sliderInput("root_yield","Root yield (t/ha) - at delivery", min=40, max=120, step = 1, value = 86)
                   ),
                   mainPanel(
-                    tableOutput("root_harvest_tab")
+                    column(12, h4("Root yield"), tableOutput("root_harvest_tab"))
                   ),
                   style = 'padding-left:15px'
                 )
@@ -247,27 +246,32 @@ ui <- fluidPage(
                fluidRow(
                  sidebarPanel(
                    dateInput("cover_date", "Date of cover with TopTex", value="2021-12-01"),
-                   h4("Temperature model"),
-                   selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
+                   br(),
+                   fluidRow(
+                     column(10, h4("CLAMP TEMPERATURE MODEL")),
+                     column(2, actionButton("help_storage_temp", "?"))
+                     ),
                    selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3, "Ventilated" = 4)),
+                   selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
                    sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
-                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5),
-                   actionButton("help_storage_temp", "?")
+                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5)
                  ),
                  mainPanel(
-                   plotly::plotlyOutput("temp_graph")
+                   column(12, plotly::plotlyOutput("temp_graph"), style = "margin-top: 125px")
                  ),
                  style = 'padding-left:15px'
                ),
                fluidRow(
                  sidebarPanel(
-                   h4("Loss model"),
+                   fluidRow(
+                     column(10, h4("STORAGE LOSS MODEL")),
+                     column(2, actionButton("help_storage_loss", "?"))
+                     ),
                    selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3)),
-                   sliderInput("mass_loss","Mass loss per degree day", min=0, max=0.05, value=0.01),
-                   actionButton("help_storage_loss", "?")
+                   sliderInput("mass_loss","Mass loss per degree day", min=0, max=0.05, value=0.01)
                  ),
                  mainPanel(
-                   plotly::plotlyOutput("loss_Cd")
+                   column(12, plotly::plotlyOutput("loss_Cd"))
                  ),
                  style = 'padding-left:15px'
                )
@@ -277,20 +281,26 @@ ui <- fluidPage(
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
-                   h4("Delivery"),
+                   fluidRow(
+                     column(10, h4("DELIVERY")),
+                     column(2,actionButton("help_delivery", "?"))
+                     ),
                    dateInput("delivery_date","Delivery date",value = "2022-01-15"),
                    sliderInput("delivery_distance","Distance to deliver (mil)",min=1,max=20,step=0.1,value=5),
                    sliderInput("delivery_cost","Cost for field",min=1000,max=200000,value=5000),
                    sliderInput("delivery_loads", "Number of loads from field", min=1, max=200, value=10)
                  ),
                  mainPanel(
-                   tableOutput("delivery_cost_tab")
+                   column(12, h4("Delivery costs"), tableOutput("delivery_cost_tab"), style = "margin-top: 125px")
                  ),
                  style = 'padding-left:15px'
                ),
                fluidRow(
                  sidebarPanel(
-                   h4("Payment"),
+                   fluidRow(
+                     column(10,h4("PAYMENT")),
+                     column(2,actionButton("help_payment", "?"))
+                   ),
                    numericInput("price", "Your contract price", value=306.48),
                    checkboxInput("vol","Eligible for volume bonus?", value = F),
                    br(),
@@ -298,7 +308,7 @@ ui <- fluidPage(
                    sliderInput("renhet", "Renhet %", min=78, max=100, value=89.5, step = 0.1)
                  ),
                  mainPanel(
-                   tableOutput("summary_final_tab")
+                   column(12, h4("Payment"), tableOutput("summary_final_tab"))
                  ),
                  style = 'padding-left:15px'
                )
@@ -817,7 +827,8 @@ server <- function(input, output, session){
       geom_line(aes(y = temp_clamp), color = "darkred") + 
       geom_line(aes(y = temp_air), color="steelblue", linetype="twodash") +
       ylab("Temperature (C)") + 
-      xlab("Date")
+      xlab("Date") +
+      labs(title = "Clamp temperature model")
   })
   
   # Plot of sugar loss
@@ -829,7 +840,8 @@ server <- function(input, output, session){
       xlim(0,500) +
       ylim(0,15) +
       ylab("Sugar loss (%)") + 
-      xlab("Accumulated temperature (Cd)")
+      xlab("Accumulated temperature (Cd)") +
+      labs(title = "Storage loss model")
   })
   
   
@@ -988,7 +1000,9 @@ server <- function(input, output, session){
       "It is defined as a daily percent increase in biomass.",
       "Choosing a Late Season Growth Potential of 100% (default value) will give a total increase in root yield over this period of approximately 40%.",
       "Late season growth potential is determined by issues like disease or water stress.",
+      br(),br(),
       "Sugar content (pol) is estimated to increase by 0.02 percentage points per day.",
+      br(),br(),
       "All varieties should have the same late-season growth potential.", 
       br(), br(),
       "Sources: NBR Project 417",
@@ -1021,6 +1035,7 @@ server <- function(input, output, session){
     showModal(modalDialog(
       title = "HARVEST YIELD",
       "Root Yield (t/ha) - At Delivery should be taken from your delivery data.",
+      br(),br(),
       "The tonnes Grown and tonnes Harvested are back calculated from the Storage Loss model (STORAGE tab), and the Harvest Loss model (above).",
       easyClose = T,
       footer = NULL
@@ -1029,21 +1044,20 @@ server <- function(input, output, session){
   
   observeEvent(input$help_storage_temp, {
     showModal(modalDialog(
-      title = "Storage temperature model",
-      "Storage conditions determine the clamp temperature in relation to the air temperature.", br(), br(),
-      "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", br(), br(),
-      "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature -",
-      "a wider clamp will build more heat than a thinner one.", 
-      "At 7m, this multiplication factor is 1.00. At 9m, it is 1.10",br(), br(),
-      "The difference years give historical mean temperatures for Borgeby.",br(), br(),
-      "The difference Clamp Temp Models define different relationships between clamp temperature and air temperature.",
-      "For models with a temperature floor - a minimum temperature the clamp can go to - Temperature Floor sets this.",br(), br(),
-      "Sources: just general observation",
-      
-      "The higher your damage score, the higher your rate of loss will be for each degree-day.",
-      "You can see this in the graph of damage per degree day (right) - your storage loss (red line) relative to the median loss (blue dashed line).", br(), br(),
-      "The Loss Models are different ways of defining the relationship between storage loss and degree-days.",
-      "Sources: Linear model - Jaggard et al. 1997. Discontinuous and Quadratics - Legrande and Wauters, 2012",
+      title = "STORAGE TEMPERATURE MODEL",
+      "The Storage Temperature Model determine the clamp temperature in relation to the air temperature.", 
+      br(), br(),
+      "The different years give historical mean air temperatures for Borgeby.",
+      br(), br(),
+      "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature.",
+      "A wider clamp will build more heat than a thinner one.", 
+      "At 7m, this multiplication factor is 1.00. At 9m, it is 1.10",
+      br(), br(),
+      "For models with a temperature floor - a minimum temperature the clamp can go to - Clamp Temperature Floor sets this.",
+      br(), br(),
+      "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", 
+      br(), br(),
+      "Sources: just general observation...",
       easyClose = T,
       footer = NULL
     ))
@@ -1051,16 +1065,37 @@ server <- function(input, output, session){
   
   observeEvent(input$help_storage_loss, {
     showModal(modalDialog(
-      title = "Storage loss model",
-      "Storage conditions determine the clamp temperature in relation to the air temperature.", br(), br(),
-      "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", br(), br(),
-      "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature -",
-      "a wider clamp will build more heat than a thinner one.", 
-      "At 7m, this multiplication factor is 1.00. At 9m, it is 1.10",br(), br(),
-      "The difference years give historical mean temperatures for Borgeby.",br(), br(),
-      "The difference Clamp Temp Models define different relationships between clamp temperature and air temperature.",
-      "For models with a temperature floor - a minimum temperature the clamp can go to - Temperature Floor sets this.",br(), br(),
-      "Sources: just general observation",
+      title = "STORAGE LOSS MODEL",
+      "The Loss Models are different ways of defining the relationship between storage loss and degree-days.",
+      "Degree Day is the sum of the red line in the above graph, for the period your beets are in storage.",
+      br(), br(),
+      "The higher your damage score, the higher your rate of sugar loss will be for each degree-day.",
+      "Your damage score is the sum of the Variety Strength (In the Field tab), and Harvest Conditions (Harvest tab).",
+      "You can see this relationship in the Storage Loss Model graph (right) - your storage loss (red line) relative to the median loss (blue dashed line).", 
+      br(), br(),
+      "Mass loss per degree-day is not a metric we have good information for, but we guess it's about 3% over long-term storage (300 degree-days).",
+      br(), br(),
+      "Sources: Linear model - Jaggard et al. 1997. Discontinuous and Quadratics - Legrande and Wauters, 2012",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$help_delivery, {
+    showModal(modalDialog(
+      title = "DELIVERY",
+      "NOT CURRENTLY IN USE",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$help_payment, {
+    showModal(modalDialog(
+      title = "PAYMENT",
+      "Please take this information from your contact and delivery data.",
+      br(),br(),
+      "Please note that there is no modelling of dirt-tare in this model - this is assumed constant over the entire growth and storage period",
       easyClose = T,
       footer = NULL
     ))
