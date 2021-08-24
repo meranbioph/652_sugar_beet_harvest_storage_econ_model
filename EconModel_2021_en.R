@@ -182,18 +182,25 @@ ui <- fluidPage(
   #    gradient = "linear",
   #    direction = "bottom"
   #  ),
-  titlePanel("Sugar beet harvest and storage"),
+  titlePanel("SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN"),
   tabsetPanel(
     tabPanel("IN THE FIELD", fluid = T,
              sidebarLayout(
                  sidebarPanel(
                    sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
-                   h4("VARIETY"),
+                   br(),
+                   fluidRow(
+                     column(10, h4("VARIETY STRENGTH")),
+                     column(2, actionButton("help_variety_strength", "?"))
+                   ),
                    selectInput("variety_type","Variety type", choices = list("Normal"=2, "High root yield"=1,"High sugar content"=3)),
-                   sliderInput("variety_hardness", "Variety hardness", min=0, max=100, value = 50),
-                   h4("LATE SEASON GROWTH POTENTIAL"),
+                   sliderInput("variety_hardness", "Variety strength", min=0, max=100, value = 50),
+                   br(),
+                   fluidRow(
+                     column(10, h4("LATE SEASON GROWTH POTENTIAL")),
+                     column(2, actionButton("help_LSG", "?"))
+                   ),
                    sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100),
-                   actionButton("help_field", "?")
                    ),
                  mainPanel(
                    plotly::plotlyOutput("LSG_chart")
@@ -204,19 +211,27 @@ ui <- fluidPage(
             sidebarLayout(
                 fluidRow(
                   sidebarPanel(
-                   dateInput("harvest_date","Harvest date",value = "2021-11-15"),
-                   sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
-                   sliderInput("harvester_cleaning", "Cleaning intensity", min=0, max=100, value=40),
-                   sliderInput("root_tip_break_perc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25),
-                   actionButton("help_harvest", "?")
+                    dateInput("harvest_date","Harvest date",value = "2021-11-15"),
+                    br(),
+                    fluidRow(
+                      column(10, h4("HARVEST CONDITIONS")),
+                      column(2,actionButton("help_harvest_conditions", "?"))
+                    ),
+                    sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
+                    sliderInput("harvester_cleaning", "Cleaning intensity", min=0, max=100, value=40),
+                    sliderInput("root_tip_break_perc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25),
                 ),
                 mainPanel(
                   tableOutput("summary_harvest_loss")
                 ),
-                style = 'padding-left:15px'
+                style = "padding-left:15px"
                 ),
                 fluidRow(
                   sidebarPanel(
+                    fluidRow(
+                      column(10, h4("ROOT YIELD")),
+                      column(2,actionButton("help_harvest_yield", "?"))
+                    ),
                     sliderInput("root_yield","Root yield (t/ha) - at delivery", min=40, max=120, step = 1, value = 86),
                     
                   ),
@@ -433,13 +448,6 @@ server <- function(input, output, session){
     LSG_tab
     
   })
-  
-  output$LSG_chart <- plotly::renderPlotly({
-     ggplot(LSG_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = LSG_root_daily), color = "darkred") + 
-      ylab("Daily growth (%)") + 
-      xlab("Date")
-    })
   
   # CLAMP TEMP TABLE. Table of daily temperature inthe clamp given the chosen inputs
   
@@ -791,6 +799,17 @@ server <- function(input, output, session){
     summary_final_tab()
   },rownames = T, digits=0)
   
+  ## CHARTS
+  
+  # Late season growth
+  output$LSG_chart <- plotly::renderPlotly({
+    ggplot(LSG_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = LSG_root_daily), color = "darkred") + 
+      ylab("Daily growth (%)") + 
+      xlab("Date") +
+      labs(title = "Late Season Growth Potential")
+  })
+  
   # Plot of temperatures (Air and Clamp)
   output$temp_graph <- plotly::renderPlotly({
     
@@ -948,27 +967,61 @@ server <- function(input, output, session){
   ###############################
   # HELP!
 
-  observeEvent(input$help_field, {
+  observeEvent(input$help_variety_strength, {
     showModal(modalDialog(
       title = "In the field",
-      "All varieties should have the same late-season growth potential, measured as a daily percent increase in biomass", br(), br(),
-      "Late season growth potential is determined by issues like disease or water stress.", br(), br(),
-      "Sources: Joakim",
+      "Strength values are used to guess the level of harvest damage that will occur.", 
+      "Variety Strength is currently a relative value, from 0 (weakest) to 100 (strongest).",
+      "Strength can be defined either on this scale, or by selecting the variety type.",
+      "Weaker varieties will have greater rates of damage.",
+      br(),br(), 
+      "Sources: NBR Project 631 / COBRI trials and further literature",
       easyClose = T,
       footer = NULL
     ))
   })
   
-  observeEvent(input$help_harvest, {
+  observeEvent(input$help_LSG, {
     showModal(modalDialog(
-      title = "Harvest",
-      "Harvest conditions determine the rate of damage.", br(), br(),
-      "Harder harvest conditions, a higher roter speed, and weaker beet varieties (selected on the previous page) give higher damage.",
-      "Higher damage means higher loss during storage.", br(), br(),
-      "The higher your damage score, the higher your rate of loss will be for each degree-day.",
-      "You can see this in the graph of damage per degree day (right) - your storage loss (red line) relative to the median loss (blue dashed line).", br(), br(),
-      "The Loss Models are different ways of defining the relationship between storage loss and degree-days.",
-      "Sources: Linear model - Jaggard et al. 1997. Discontinuous and Quadratics - Legrande and Wauters, 2012",
+      title = "LATE SEASON GROWTH POTENTIAL",
+      "Late Season Growth Potential defines how much extra root yield will be added between early September and the end of November.",
+      "It is defined as a daily percent increase in biomass.",
+      "Choosing a Late Season Growth Potential of 100% (default value) will give a total increase in root yield over this period of approximately 40%.",
+      "Late season growth potential is determined by issues like disease or water stress.",
+      "Sugar content (pol) is estimated to increase by 0.02 percentage points per day.",
+      "All varieties should have the same late-season growth potential.", 
+      br(), br(),
+      "Sources: NBR Project 417",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$help_harvest_conditions, {
+    showModal(modalDialog(
+      title = "HARVEST CONDITIONS",
+      "Harvest Conditions are used to guess the level of harvest damage that will occur.",
+      "Harder harvest conditions, a higher roter speed, and weaker beet varieties (selected on the IN THE FIELD page) give higher damage.",
+      "Higher damage means higher loss during storage.", 
+      "The higher your damage score, the higher your rate of loss will be for each degree-day (shown on STORAGE tab).",
+      br(), 
+      "Sources: NBR Project ###.",
+      br(),br(),
+      "Roots With Tip Breakage > 2cm is used to guess the harvest loss per ha.",
+      "At the low end, 20% or less gives 0.5t/ha. At the high end, 80% or more gives 4t/ha.",
+      "To sample this, 20 representative beets should be measured in the clamp.",
+      br(),
+      "Source: IIRB",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$help_harvest_yield, {
+    showModal(modalDialog(
+      title = "HARVEST YIELD",
+      "Root Yield (t/ha) - At Delivery should be taken from your delivery data.",
+      "The tonnes Grown and tonnes Harvested are back calculated from the Storage Loss model (STORAGE tab), and the Harvest Loss model (above).",
       easyClose = T,
       footer = NULL
     ))
@@ -986,6 +1039,11 @@ server <- function(input, output, session){
       "The difference Clamp Temp Models define different relationships between clamp temperature and air temperature.",
       "For models with a temperature floor - a minimum temperature the clamp can go to - Temperature Floor sets this.",br(), br(),
       "Sources: just general observation",
+      
+      "The higher your damage score, the higher your rate of loss will be for each degree-day.",
+      "You can see this in the graph of damage per degree day (right) - your storage loss (red line) relative to the median loss (blue dashed line).", br(), br(),
+      "The Loss Models are different ways of defining the relationship between storage loss and degree-days.",
+      "Sources: Linear model - Jaggard et al. 1997. Discontinuous and Quadratics - Legrande and Wauters, 2012",
       easyClose = T,
       footer = NULL
     ))
