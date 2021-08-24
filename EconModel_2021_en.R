@@ -79,15 +79,14 @@
 ###############################################
 
 ## CONTRACT = Prices per tonne
-kr_tonne <- 275 # at reference pol of 17%
-kr_renhet <- 2 # extra kr per %-point over ref, at 17% pol%
+kr_tonne <- 313 # at reference pol of 17% (30,1 EUR)
+kr_renhet <- 2 # extra kr per %-point over ref (89.5%), at 17% pol%
 kr_pol <- 9 # extra % per %-point over ref of 17% pol
 kr_TT <- 5 # for the use of TopTex for at least 7 days prior to delivery, for delivery after 15 November
-kr_late <- 1 # extra payment per tonne for beets delivered late
-kr_vol <- 5 # extra per tonne if area increases 10%
+kr_vol <- 5 # extra per tonne if area increases 10%. This is SEK (actual bonus is 0,5 EUR/t)
 date_full <- seq(as.POSIXct("2021-09-10", tz = "UTC", format = "%Y-%m-%d"), length.out = 172, by = "1 day")
 price_early <- c(37,37,37,37,37,36,33,30,27,24,21,19,16,14,12,10,8,6,4,2,1,rep(0,151))
-price_late <- c(rep(0,82),seq(1,23,by=1),seq(24.5,123.5,by=1.5))
+price_late <- c(rep(0,82),seq(1,31,by=1),seq(32.5,120,by=1.5))
 price_TT <- c(rep(0,66),rep(5,8), rep(10,8), rep(15,90))
 price_vol <- rep(0,172)
 price_tab_contract <- data.frame(date_full,price_early, price_late, price_TT, price_vol)
@@ -184,6 +183,33 @@ ui <- fluidPage(
   #  ),
   titlePanel("SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN"),
   tabsetPanel(
+    tabPanel("INSTRUCTIONS", fluid = T,
+             fluidRow(
+               column(12,h4("WARNINGS / DISCLAIMER"),
+                      "You should not use this model to make management decisions on your farm.",
+                      "It's purpose is to help explore the factors that drive successful harvest and storage strategies.",
+                      "The model is general and may not be suitable to apply to your own production system.",
+                      br(),br(),
+                      "The 2021 price model for Sweden is applied. Prices are assumed fixed in SEK.",
+                      br(), br()
+               )
+             ),
+             fluidRow(
+               column(12, h4("DEFINITIONS"),
+                      "Clean",br(),
+                      "Clean 17",br(),
+                      "Delivered",br(),
+                      "Delivered 17",
+                      br(), br() 
+               )
+             ),
+             fluidRow(
+               column(12, h4("INSTRUCTIONS"),
+                "Just work through the tabs."
+               )
+             )
+      
+    ),
     tabPanel("IN THE FIELD", fluid = T,
              sidebarLayout(
                  sidebarPanel(
@@ -301,7 +327,7 @@ ui <- fluidPage(
                      column(10,h4("PAYMENT")),
                      column(2,actionButton("help_payment", "?"))
                    ),
-                   numericInput("price", "Your contract price", value=306.48),
+                   numericInput("price", "Your contract price", value=313),
                    checkboxInput("vol","Eligible for volume bonus?", value = F),
                    br(),
                    sliderInput("pol", "Sugar content", min=15, max=22, value=17, step = 0.1),
@@ -320,7 +346,7 @@ ui <- fluidPage(
                       checkboxInput("data_restrict_end","Restrict data end date to delivery date?"),
                       style = 'padding-left:15px'
                       ),
-               column(3,checkboxGroupInput("summary_tab_show","Show:",choices=c("Per ha"="HA", "Per field"="FI", "Per tonne clean" = "CL"," Per tonne delivered"="DE"),selected = )),
+               column(3,checkboxGroupInput("summary_tab_show","Show economy:",choices=c("Per ha"="HA", "Per field"="FI", "Per tonne clean" = "CL"," Per tonne delivered"="DE"),selected = )),
                column(6,)
             ),
              fluidRow(column(12,tableOutput("summary_tab_output")))
@@ -414,10 +440,6 @@ server <- function(input, output, session){
     
     root_harvest_tab
   })
-  
-  output$root_harvest_tab <- renderTable({
-    root_harvest_tab()
-  }, rownames = T)
 
   # LOCATION OF BEETS TABLE
   loc_tab <- reactive({
@@ -799,6 +821,11 @@ server <- function(input, output, session){
   ###############
   # VISUALS
   
+  #Summary root harvest
+  output$root_harvest_tab <- renderTable({
+    root_harvest_tab()
+  }, rownames = T)
+  
   # Summary price table
   output$summary_tab_output = renderTable({
     summary_tab_output()
@@ -1094,6 +1121,19 @@ server <- function(input, output, session){
     showModal(modalDialog(
       title = "PAYMENT",
       "Please take this information from your contact and delivery data.",
+      br(),br(),
+      "A Clean Tonne is one tonne of sugar beet (only), with pol = 17%.",
+      "To adjust to a delivered tonne (a tonne in the truck):", 
+      br(), "First adjust to 17%.", 
+      "Add 0.9% of your base price per 0.1 percentage point above pol = 17%.",
+      "If your beets are less than 17%, subtract 0.9% of your base price per 0.1 percentage point below pol = 17%.",
+      br(), "Then convert to a 'dirty' tonne by multiplying by your measured dirt-tare.",
+      br(),br(),
+      "Bonuses include TopTex bonus, early/late delivery bonus, volume bonus, and dirt-tare bonus/penalty.",
+      "The TopTex bonus is 5/10/15 SEK per clean tonne when TopTex is used for at least 7 days prior a delivery after 15Nov/1 Dec/15 Dec.",
+      "Late delivery bonus is 1 SEK per clean tonne per day through December, and 1.5 SEK per clean tonne per day from 1 January.",
+      "The volume bonus is 5 SEK (0.5 EUR) per clean tonne if you have increased your area grown under sugar beet by 10% since 2019.",
+      "Dirt-tare bonus/ penalty is 2 SEK per clean tonne per percentage point below/above 10.5% dirt-tare.",
       br(),br(),
       "Please note that there is no modelling of dirt-tare in this model - this is assumed constant over the entire growth and storage period",
       easyClose = T,
