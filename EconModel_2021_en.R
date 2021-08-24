@@ -196,10 +196,22 @@ ui <- fluidPage(
              ),
              fluidRow(
                column(12, h4("DEFINITIONS"),
-                      "Clean",br(),
-                      "Clean 17",br(),
-                      "Delivered",br(),
-                      "Delivered 17",
+                      "Clean (mass): The beet mass that is deemed processible.", 
+                      "The term on which root yield is commonly defined.", 
+                      "The mass is independent of sugar concentration.",
+                      "Equals the weight of delivered beet x (1 - dirt-tare).",
+                      br(),br(),
+                      "Clean (prices): The price per tonne of clean beet mass, are adjusted to be for a pol of 17%.",
+                      "The term on which prices are set.",
+                      "The price is adjusted 9% per percentage point change in pol from the base of 17%.",
+                      "The conversion to 17% is linear in the change in price per change in pol percentage point.",
+                      "This means that the increase/ decrease in price is greater at lower sugar concentrations.",
+                      "The contract price is for a pol of 17%.",
+                      "If your pol is higher than this, then the prices per tonne clean given in this model will be higher than your contract price.",
+                      br(),br(),
+                      "Delivered: The mass of beet that falls out of the back of the truck at Örtofta.",
+                      "A large fraction of the mass is soil and unprocessible beet material (dirt tare).",
+                      "Is independent of sugar concentration.",
                       br(), br() 
                )
              ),
@@ -429,14 +441,14 @@ server <- function(input, output, session){
     root_mass_harvest <- full_tab_p$cum_mass[which(full_tab_p$date_full == as.POSIXct(harvest_date_p))] 
     root_mass_grown <- full_tab_p$cum_mass[which(full_tab_p$date_full == (as.POSIXct(harvest_date_p) - 86400))]
     
-    root_mass_delivered_field <- root_yield_p*field_size_p
+    root_mass_factory_field <- root_yield_p*field_size_p
     root_mass_harvest_field <- root_mass_harvest*field_size_p
     root_mass_grown_field <- root_mass_grown*field_size_p
     
     root_harvest_tab <- matrix(c(root_mass_grown, root_mass_harvest, root_yield_p,
-                                 root_mass_grown_field, root_mass_harvest_field, root_mass_delivered_field), byrow=F, nrow=3) 
+                                 root_mass_grown_field, root_mass_harvest_field, root_mass_factory_field), byrow=F, nrow=3) 
     colnames(root_harvest_tab) <- c("Ha","Field")
-    rownames(root_harvest_tab) <- c("Grown","Harvested", "Delivered")
+    rownames(root_harvest_tab) <- c("Grown","Harvested", "Factory")
     
     root_harvest_tab
   })
@@ -672,7 +684,6 @@ server <- function(input, output, session){
     ## 
     cum_percent_loss_max <- max(full_tab$cum_percent_loss[which(full_tab$date_full<=delivery_date)])
     full_tab$cum_pol <- pol + pol*(cum_percent_loss_max/100) - (full_tab$cum_percent_loss/100)*pol
-    full_tab$pol_factor <- (full_tab$cum_pol - ref_pol*100)*kr_pol
     
     ## Mass loss for given temp
     full_tab <- merge(full_tab, mass_loss_tab_p, by="cum_temp")
@@ -692,7 +703,6 @@ server <- function(input, output, session){
     full_tab$cum_mass <- ifelse(full_tab$date_full < harvest_date, 
       root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100), full_tab$cum_mass)
     
-    
     ## Pol gain under late season growth
     pol_harvest <- full_tab$cum_pol[which(full_tab$date_full == harvest_date)]
     LSG_pol_cum_max <- full_tab$LSG_pol_cum[which(full_tab$date_full == harvest_date)]
@@ -700,6 +710,9 @@ server <- function(input, output, session){
     #  pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100)
     full_tab$cum_pol <- ifelse(full_tab$date_full < harvest_date,
       pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100),full_tab$cum_pol)    
+    
+    ## Pol factor across whole period
+    full_tab$pol_factor <- (full_tab$cum_pol - ref_pol*100)*kr_pol
     
     ## SUGAR YIELD
     full_tab$cum_sug <- full_tab$cum_pol/100*full_tab$cum_mass
