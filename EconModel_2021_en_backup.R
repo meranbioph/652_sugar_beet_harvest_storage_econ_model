@@ -326,7 +326,7 @@ ui <- fluidPage(
                     column(2, actionButton("help_harvest_yield", "?"))
                   ),
                   fluidRow(
-                    column(6,dateInput("prod_data_date","Date payment schedule data from:",value = "2022-01-15")),
+                    column(6,dateInput("prod_data_date","Date payment schedule data from:",value = "2021-09-15")),
                     column(6,"TEXT")
                   ),
                   sliderInput("root_yield","Root yield (t/ha)", min=40, max=120, step = 1, value = 86),
@@ -461,14 +461,14 @@ server <- function(input, output, session){
 
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
-    location <- "Clamp"
+    location <- "clamp"
     
     # Full table of location of beets
     loc_tab <- data.frame(date_full, location)
     
-    loc_tab$location[which(loc_tab$date_full <= harvest_date)] <- "Field"
-    loc_tab$location[which(loc_tab$date_full == harvest_date)] <- "Harvest"
-    loc_tab$location[which(loc_tab$date_full >= delivery_date)] <- "Delivered"
+    loc_tab$location[which(loc_tab$date_full <= harvest_date)] <- "field"
+    loc_tab$location[which(loc_tab$date_full == harvest_date)] <- "harvest"
+    loc_tab$location[which(loc_tab$date_full >= delivery_date)] <- "delivered"
     
     loc_tab
   })
@@ -478,19 +478,19 @@ server <- function(input, output, session){
     LSG_pot <- input$late_potent
     
     LSG_pol <- rep(0.02, length(date_full))
-    
+
     LSG_root_day <- seq(1,length(date_full)+5)
-    LSG_mass_loss_pc_daily <- 1.5735e-06*LSG_root_day^2-2.8177e-04*LSG_root_day+0.01244
-    LSG_mass_loss_pc_daily <- c(0.01244,LSG_mass_loss_pc_daily)
-    LSG_mass_loss_pc_daily[which(LSG_mass_loss_pc_daily <= 0)] <- 0
-    LSG_mass_loss_pc_daily[100:length(date_full)] <-0
-    LSG_mass_loss_pc_daily <- LSG_mass_loss_pc_daily[1:length(date_full)]
-    LSG_mass_loss_pc_daily <- LSG_mass_loss_pc_daily*LSG_pot
+    LSG_root_daily <- 1.5735e-06*LSG_root_day^2-2.8177e-04*LSG_root_day+0.01244
+    LSG_root_daily <- c(0.01244,LSG_root_daily)
+    LSG_root_daily[which(LSG_root_daily <= 0)] <- 0
+    LSG_root_daily[100:length(date_full)] <-0
+    LSG_root_daily <- LSG_root_daily[1:length(date_full)]
+    LSG_root_daily <- LSG_root_daily*LSG_pot
     
-    LSG_mass_loss_pc_cum <- cumsum(LSG_mass_loss_pc_daily)
-    LSG_pol_loss_pp_cum <- cumsum(LSG_pol)
+    LSG_root_cum <- cumsum(LSG_root_daily)
+    LSG_pol_cum <- cumsum(LSG_pol)
     
-    LSG_tab <- data.frame(date_full,LSG_mass_loss_pc_daily,LSG_mass_loss_pc_cum,LSG_pol_loss_pp_cum)
+    LSG_tab <- data.frame(date_full,LSG_root_daily,LSG_root_cum,LSG_pol_cum)
     
     LSG_tab
     
@@ -517,7 +517,8 @@ server <- function(input, output, session){
       temp_clamp <- temp_air
       temp_clamp <- temp_clamp * temp_clamp_size
       temp_clamp <- WMA(temp_clamp,n=3,wts=c(0.2,0.3,0.5))
-      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-(1:2)])
+      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-1])
+      temp_clamp <- temp_clamp[1:(length(temp_clamp)-1)]
       temp_clamp <- replace(temp_clamp, temp_clamp < temp_ref, temp_ref)
     }
     ## min_ref => min temp = ref_temp
@@ -536,7 +537,8 @@ server <- function(input, output, session){
       temp_clamp <- temp_air
       temp_clamp <- temp_clamp * temp_clamp_size
       temp_clamp <- WMA(temp_clamp,n=3,wts=c(0.2,0.3,0.5))
-      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-(1:2)])
+      temp_clamp <- c(temp_air[1],temp_air[1]/3+2*temp_air[2]/3,temp_clamp[-1])
+      temp_clamp <- temp_clamp[1:(length(temp_clamp)-1)]
       temp_clamp <- pmin(temp_clamp, temp_air)
       temp_clamp <- replace(temp_clamp, temp_clamp < temp_ref, temp_ref)
     }
@@ -573,7 +575,7 @@ server <- function(input, output, session){
 
     
     # Write actual loss rate as function of "damage factor"
-    ref_loss_data$clamp_pol_loss_pc_cum <- ref_loss_data$ref_medel*factor()
+    ref_loss_data$actual <- ref_loss_data$ref_medel*factor()
     
     #Write table
     ref_loss_data
@@ -588,9 +590,9 @@ server <- function(input, output, session){
     cum_temp <- seq(1,1000)
     cum_temp <- c(0,cum_temp)
     
-    clamp_mass_loss_pc_cum <- mass_loss_p * cum_temp
+    cum_mass_loss <- mass_loss_p * cum_temp
     
-    mass_loss_tab <- data.frame(cum_temp, clamp_mass_loss_pc_cum)
+    mass_loss_tab <- data.frame(cum_temp, cum_mass_loss)
     
     mass_loss_tab
     
@@ -598,9 +600,9 @@ server <- function(input, output, session){
   
   # HARVEST LOSS
   summary_harvest_loss <- reactive({
-    root_tip_break_pc_p <- input$root_tip_break_pc
+    harvest_loss_p <- input$root_tip_break_perc
     
-    harvest_loss_tn_summary <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_pc_p)]
+    harvest_loss_tn_summary <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == harvest_loss_p)]
     
     summary_harvest_loss <- matrix(c(harvest_loss_tn_summary))
     colnames(summary_harvest_loss) <- c("Harvest loss (tn/ha)")
@@ -647,7 +649,7 @@ server <- function(input, output, session){
     temp_tab_p <- data.frame(temp_tab())
     loss_tab_p <- data.frame(loss_tab())
     mass_loss_tab_p <- data.frame(mass_loss_tab())
-    loss_tab_p <- loss_tab_p[,c("cum_temp","clamp_pol_loss_pc_cum")]
+    loss_tab_p <- loss_tab_p[,c("cum_temp","actual")]
     loc_tab_p <- data.frame(loc_tab())
     LSG_tab_p <- data.frame(LSG_tab())
     
@@ -655,15 +657,14 @@ server <- function(input, output, session){
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     cover_date <- as.POSIXct(input$cover_date, tz = "UTC", format = "%Y-%m-%d")
-    day0 <-  as.POSIXct(input$prod_data_date, tz = "UTC", format = "%Y-%m-%d")
     kr_tonne <- input$price
     renhet <- input$renhet/100
-    pol_p <- input$pol
+    pol <- input$pol
     root_yield <- input$root_yield
     vol <- input$vol
     field_size <- input$field_size
     root_harvest <- root_yield*field_size
-    root_tip_break_pc_p <- input$root_tip_break_pc
+    root_tip_break_perc <- input$root_tip_break_perc
     
     # calculate a few key parameters
     days_h_s <- round(as.numeric(difftime(delivery_date, harvest_date, units="days")+1))
@@ -679,27 +680,13 @@ server <- function(input, output, session){
     ## Cumulative temp
     full_tab$cum_temp <- c(rep(0, (days_full - days_p_h)), cumsum(full_tab$temp_clamp_p[which(full_tab$date_full>=harvest_date)]))
     full_tab$cum_temp <- round(full_tab$cum_temp)
-    
-    ## Clamp Pol Loss for given temp 
+    ## Loss for given temp 
     full_tab <- merge(full_tab, loss_tab_p, by="cum_temp")
-    full_tab <- full_tab[,c("date_full","location","price_early","price_late","price_TT","price_vol","temp_clamp_p","cum_temp","clamp_pol_loss_pc_cum")]
-    full_tab$clamp_pol_loss_pp_cum <- full_tab$clamp_pol_loss_pc_cum*pol_p/100
-    clamp_pol_loss_pp_cum_ref <- full_tab$clamp_pol_loss_pp_cum[which(full_tab$date_full==day0)]*(-1)
-    full_tab$clamp_pol_loss_pp_rel_day0 <- clamp_pol_loss_pp_cum_ref+full_tab$clamp_pol_loss_pp_cum
-    
-    ## Late Season Growth Pol gain
-    full_tab <- merge(full_tab, LSG_tab_p, by="date_full")
-    full_tab$LSG_pol_loss_pp_cum <- ifelse(full_tab$date_full <= harvest_date, full_tab$LSG_pol_loss_pp_cum, full_tab$LSG_pol_loss_pp_cum[which(full_tab$date_full == harvest_date)])
-    full_tab$LSG_pol_loss_pp_cum <-   full_tab$LSG_pol_loss_pp_cum * (-1)
-    LSG_pol_loss_pp_cum_ref <- full_tab$LSG_pol_loss_pp_cum[which(full_tab$date_full==day0)]*(-1)
-    full_tab$LSG_pol_loss_pp_rel_day0 <- LSG_pol_loss_pp_cum_ref+full_tab$LSG_pol_loss_pp_cum
-    
-    ## Total daily pol change (pp)
-    full_tab$pol_loss_pp_cum <- full_tab$clamp_pol_loss_pp_cum + full_tab$LSG_pol_loss_pp_cum
-    full_tab$pol_loss_pp_cum <- full_tab$pol_loss_pp_cum - full_tab$pol_loss_pp_cum[which(full_tab$date_full==harvest_date)]
-    full_tab$pol_loss_pp_rel_day0 <- full_tab$clamp_pol_loss_pp_rel_day0 + full_tab$LSG_pol_loss_pp_rel_day0
-    full_tab$pol_cum <- pol_p - full_tab$pol_loss_pp_rel_day0
-    full_tab$pol_loss_pc_cum <- full_tab$pol_loss_pp_cum / full_tab$pol_cum[which(full_tab$date_full==harvest_date)]*100
+    names(full_tab)[names(full_tab)=="actual"] <- "cum_percent_loss"
+    full_tab <- full_tab[,c("date_full","location","price_early","price_late","price_TT","price_vol","temp_clamp_p","cum_temp","cum_percent_loss")]
+    ## 
+    cum_percent_loss_max <- max(full_tab$cum_percent_loss[which(full_tab$date_full<=delivery_date)])
+    full_tab$cum_pol <- pol + pol*(cum_percent_loss_max/100) - (full_tab$cum_percent_loss/100)*pol
     
     ## Mass loss for given temp
     full_tab <- merge(full_tab, mass_loss_tab_p, by="cum_temp")
@@ -707,9 +694,10 @@ server <- function(input, output, session){
     full_tab$cum_mass <- root_yield + root_yield*(cum_mass_loss_max/100) - root_yield*(full_tab$cum_mass_loss/100)
     
     ## Mass loss at harvest
-    harvest_loss <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_pc_p)]
+    harvest_loss <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_perc)]
     
     ## Mass gain under late season growth
+    full_tab <- merge(full_tab, LSG_tab_p, by="date_full")
     root_mass_harvest <- full_tab$cum_mass[which(full_tab$date_full == harvest_date)] 
     root_mass_grown <- root_mass_harvest + harvest_loss
     LSG_root_cum_max <- full_tab$LSG_root_cum[which(full_tab$date_full == harvest_date)]
@@ -718,11 +706,19 @@ server <- function(input, output, session){
     full_tab$cum_mass <- ifelse(full_tab$date_full < harvest_date, 
       root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100), full_tab$cum_mass)
     
+    ## Pol gain under late season growth
+    pol_harvest <- full_tab$cum_pol[which(full_tab$date_full == harvest_date)]
+    LSG_pol_cum_max <- full_tab$LSG_pol_cum[which(full_tab$date_full == harvest_date)]
+    #full_tab$cum_pol[which(full_tab$date_full < harvest_date)] <-
+    #  pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100)
+    full_tab$cum_pol <- ifelse(full_tab$date_full < harvest_date,
+      pol_harvest - pol_harvest*(LSG_pol_cum_max/100) + pol_harvest*(full_tab$LSG_pol_cum/100),full_tab$cum_pol)    
+    
     ## Pol factor across whole period
-    full_tab$pol_factor <- (full_tab$pol_cum - ref_pol*100)*kr_pol
+    full_tab$pol_factor <- (full_tab$cum_pol - ref_pol*100)*kr_pol
     
     ## SUGAR YIELD
-    full_tab$cum_sug <- full_tab$pol_cum/100*full_tab$cum_mass
+    full_tab$cum_sug <- full_tab$cum_pol/100*full_tab$cum_mass
     
     #TT bonus
     full_tab$price_TT[full_tab$date_full < as.POSIXct(cover_date)+7] <- 0
@@ -759,7 +755,8 @@ server <- function(input, output, session){
     })
 
   # SUMMARY (VISUALISED) RESULTS
-
+  ##!!! This should really just restrict the full results table within the parameters given.
+      
   summary_tab = reactive({
     # input from required previous tables
     summary_tab <- data.frame(full_tab())
@@ -772,7 +769,7 @@ server <- function(input, output, session){
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     
     # Define summary table - columns
-    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "pol_loss_pc_cum", "pol_cum","cum_mass","cum_sug")
+    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "cum_percent_loss", "cum_pol","cum_mass","cum_sug")
     if("CL" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_clean","price_bonus_clean","price_clean")
     if("DE" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_delivered","price_bonus_delivered","price_delivered")
     if("HA" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_ha","price_bonus_ha","price_ha")
@@ -788,9 +785,9 @@ server <- function(input, output, session){
     delivery_date <<- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     harvest_date <<- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     cum_loss_delivery <<- summary_tab$cum_temp[summary_tab$date_full==delivery_date]
-    loss_max <- max(summary_tab$pol_loss_pc_cum)
-    pol_max <- max(summary_tab$pol_cum)
-    pol_min <- min(summary_tab$pol_cum)
+    loss_max <- max(summary_tab$cum_percent_loss)
+    pol_max <- max(summary_tab$cum_pol)
+    pol_min <- min(summary_tab$cum_pol)
     pol_diff <- pol_max - pol_min
     amplify_factor <- 0.5
     amplify <<- loss_max/pol_diff*amplify_factor
@@ -881,7 +878,7 @@ server <- function(input, output, session){
   output$loss_Cd <- plotly::renderPlotly({
     
     ggplot(loss_tab(), aes(x=cum_temp)) + 
-      geom_line(aes(y = clamp_pol_loss_pc_cum), color = "darkred") + 
+      geom_line(aes(y = actual), color = "darkred") + 
       geom_line(aes(y = ref_medel), color="steelblue", linetype="twodash") +
       xlim(0,500) +
       ylim(0,15) +
@@ -908,8 +905,8 @@ server <- function(input, output, session){
   
   output$summary_graph_pol <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss")) + 
-      geom_line(aes(y = pol_cum, color = "Pol")) +
+      geom_line(aes(y = cum_percent_loss, color = "Cum. % loss")) + 
+      geom_line(aes(y = cum_pol * amplify - move, color = "Pol")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
@@ -921,22 +918,6 @@ server <- function(input, output, session){
       labs(title = "SUGAR CONTENT") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
-  
-  #output$summary_graph_pol <- plotly::renderPlotly({
-  #  ggplot(summary_tab(), aes(x=date_full)) + 
-  #    geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss")) + 
-  #    geom_line(aes(y = pol_cum * amplify - move, color = "Pol")) +
-  #    geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
-  #    geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-  #    scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Cum. % loss", "Pol"),
-  #                        values = c("Cum. % loss"="red3", "Pol"="blue3")) +
-  #    ylab("Sugar loss (%)") + 
-  #    xlab("Date") +
-  #    labs(title = "SUGAR CONTENT") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
   
   output$summary_graph_mass <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
