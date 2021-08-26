@@ -122,7 +122,8 @@ yr2020 <- c(14.1,13.7,15.7,16.0,17.3,18.1,14.4,10.1,10.5,11.1,11.3,12.9,13.4,14.
 temp_tab_historical <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
 
 root_tip_break_perc <- seq(0,100,5)
-harvest_loss_tn <- c(rep(0.5,5),rep(1,4),rep(2,4),rep(3,4),rep(4,4))
+#harvest_loss_tn <- c(rep(0.5,5),rep(1,4),rep(2,4),rep(3,4),rep(4,4))
+harvest_loss_tn <- 1.902e-4*root_tip_break_perc^2 + 2.254e-2*root_tip_break_perc + 0.25
 harvest_loss_tab <- data.frame(root_tip_break_perc,harvest_loss_tn)
 
 ###############################################
@@ -255,16 +256,17 @@ ui <- fluidPage(
                      column(2, actionButton("help_variety_strength", "?"))
                    ),
                    selectInput("variety_type","Variety type", choices = list("Normal"=2, "High root yield"=1,"High sugar content"=3)),
-                   sliderInput("variety_hardness", "Variety strength", min=0, max=100, value = 50),
+                   sliderInput("variety_hardness", "Variety strength (relative)", min=0, max=100, value = 50),
                    br(),
                    fluidRow(
                      column(10, h4("LATE SEASON GROWTH POTENTIAL")),
                      column(2, actionButton("help_LSG", "?"))
                    ),
-                   sliderInput("late_potent","Late season growth potential (%)", min=50, max=125, step=5, value=100),
+                   sliderInput("late_potent","Late season growth potential (relative to average (%))", min=50, max=125, step=5, value=100),
                    ),
                  mainPanel(
-                   column(12,plotly::plotlyOutput("LSG_chart"), style = "margin-top: 175px")
+                   column(12,plotly::plotlyOutput("LSG_mass_daily_chart"),
+                   plotly::plotlyOutput("LSG_mass_cum_chart"))
                  )
                )
     ),
@@ -277,12 +279,12 @@ ui <- fluidPage(
                   column(10, h4("HARVEST CONDITIONS")),
                   column(2, actionButton("help_harvest_conditions", "?"))
                 ),
-                sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
-                sliderInput("harvester_cleaning", "Cleaning intensity", min=0, max=100, value=40),
+                sliderInput("late_moisture", "Soil moisture at harvest (percent of ideal (%))", min=0, max=200, value=100),
+                sliderInput("harvester_cleaning", "Cleaning intensity (relative)", min=0, max=100, value=40),
                 sliderInput("root_tip_break_pc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25)
                 ),
               mainPanel(
-                column(12, h4("Harvest loss"),tableOutput("summary_harvest_loss"), style = "margin-top: 375px")
+                column(12, h4("Harvest loss"),tableOutput("summary_harvest_loss"), style = "margin-top: 340px")
               )
             )
     ),
@@ -299,7 +301,7 @@ ui <- fluidPage(
                    selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3, "Ventilated" = 4)),
                    selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
                    sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
-                   sliderInput("ref_temp", "Clamp temperature floor", min=0, max=10, value=5)
+                   sliderInput("ref_temp", "Clamp temperature floor (°C)", min=0, max=10, value=2)
                  ),
                  mainPanel(
                    column(12, plotly::plotlyOutput("temp_graph"), style = "margin-top: 125px")
@@ -313,7 +315,7 @@ ui <- fluidPage(
                      column(2, actionButton("help_storage_loss", "?"))
                      ),
                    selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3)),
-                   sliderInput("mass_loss","Mass loss per degree day", min=0, max=0.05, value=0.01)
+                   sliderInput("mass_loss","Mass loss per degree day (%/t/°C)", min=0, max=0.05, value=0.01)
                  ),
                  mainPanel(
                    column(12, plotly::plotlyOutput("loss_Cd"))
@@ -331,8 +333,7 @@ ui <- fluidPage(
                      ),
                    dateInput("delivery_date","Delivery date",value = "2022-01-15"),
                    sliderInput("delivery_distance","Distance to deliver (mil)",min=1,max=20,step=0.1,value=5),
-                   sliderInput("delivery_cost","Cost for field",min=1000,max=200000,value=5000),
-                   sliderInput("delivery_loads", "Number of loads from field", min=1, max=200, value=10)
+                   sliderInput("delivery_cost","Cost for delivery",min=1000,max=200000,value=5000)
                  ),
                  mainPanel(
                    column(12, h4("Delivery costs"), tableOutput("delivery_cost_tab"), style = "margin-top: 125px")
@@ -353,8 +354,8 @@ ui <- fluidPage(
                     column(6,textOutput("prod_data_loc"),style = "margin-top: 30px")
                   ),
                   sliderInput("root_yield","Root yield (t/ha)", min=40, max=120, step = 1, value = 86),
-                  sliderInput("pol", "Sugar content", min=15, max=22, value=17, step = 0.1),
-                  sliderInput("renhet", "Renhet %", min=78, max=100, value=89.5, step = 0.1)
+                  sliderInput("pol", "Sugar content (% pol)", min=15, max=22, value=17, step = 0.1),
+                  sliderInput("renhet", "Renhet (%)", min=78, max=100, value=89.5, step = 0.1)
                 ),
                 mainPanel(
                    column(12, h4("Production summary"), tableOutput("root_harvest_tab"))
@@ -367,7 +368,7 @@ ui <- fluidPage(
                      column(10,h4("PAYMENT")),
                      column(2,actionButton("help_payment", "?"))
                    ),
-                   numericInput("price", "Your contract price", value=313),
+                   numericInput("price", "Your contract price (SEK)", value=313),
                    checkboxInput("vol","Eligible for volume bonus?", value = F),
                    br(),
                  ),
@@ -408,35 +409,21 @@ ui <- fluidPage(
                column(6,plotly::plotlyOutput("summary_graph_price_cl")),
                column(6,plotly::plotlyOutput("summary_graph_price_de"))
              )
-    )#,
-    #tabPanel("Payment Comparison", fluid = T,
-    #         fluidRow(
-    #           column(7, actionButton("comp_1", "Compare the current set-up")),
-    #           column(5, actionButton("comp_2", "Compare the current set-up"))
-    #         ),
-    #         fluidRow(
-    #           column(5,tableOutput("comp_1_para")), # table summarising the last week of data for the case
-    #           column(2,),
-    #           column(5,tableOutput("comp_2_para"))
-    #         ),
-    #         fluidRow(
-    #           column(5,plotOutput("summary_graph_price_comp_1")), # graph showing the payment graph
-    #           column(2,),
-    #           column(5,plotOutput("summary_graph_price_comp_2"))
-    #           ),
-    #         fluidRow(
-    #           column(5,plotOutput("summary_graph_payment_comp_1")), # graph showing the payment graph
-    #           column(2,),
-    #           column(5,plotOutput("summary_graph_payment_comp_2"))
-    #         ),
-    #         fluidRow(
-    #           column(5,tableOutput("comp_1_tab")),
-    #           column(2,), # table summarising the case
-    #           column(5,tableOutput("comp_2_tab"))
-    #         )
-    #)
+    ),
+    tabPanel("COMPARISON", fluid = T,
+             fluidRow(
+               column(6, actionButton("comp_1", "Compare the current set-up")),
+               column(6, actionButton("comp_2", "Compare the current set-up"))
+             ),
+             fluidRow(
+               column(6,tableOutput("comp_1_tab"),
+                      plotly::plotlyOutput("summary_graph_sug_comp_1")),
+               column(6,tableOutput("comp_2_tab"),
+                      plotly::plotlyOutput("summary_graph_sug_comp_2"))
+             )
+          )
+    )
   )
-)
 
 # shinyApp(ui=ui, server=server)
 
@@ -452,7 +439,6 @@ ui <- fluidPage(
 server <- function(input, output, session){
   
   # Update hardness slider
-  
   observe(updateSliderInput(session, "variety_hardness", 
                             value = ifelse(input$variety_type == 1, 30, ifelse(input$variety_type == 2, 50, 70))))
   
@@ -636,11 +622,13 @@ server <- function(input, output, session){
   # HARVEST LOSS
   summary_harvest_loss <- reactive({
     root_tip_break_pc_p <- input$root_tip_break_pc
+    root_harvest_p <- data.frame(root_harvest_tab())[3,3]
     
     harvest_loss_tn_summary <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_pc_p)]
+    harvest_loss_pc_summary <- harvest_loss_tn_summary/root_harvest_p*100
     
-    summary_harvest_loss <- matrix(c(harvest_loss_tn_summary))
-    colnames(summary_harvest_loss) <- c("Harvest loss (tn/ha)")
+    summary_harvest_loss <- matrix(c(harvest_loss_tn_summary,harvest_loss_pc_summary ), nrow = 1)
+    colnames(summary_harvest_loss) <- c("Tonne per hectare", "Percent")
     
     summary_harvest_loss
   })
@@ -652,13 +640,8 @@ server <- function(input, output, session){
     root_harvest_p <- root_harvest_tab_p[3,4]
     root_yield_p <- root_harvest_tab_p[3,3]
     
-    #root_harvest <- input$root_yield * input$field_size
     delivery_cost_field_clean <- input$delivery_cost / (input$renhet/100)
     delivery_cost_field_soil <- input$delivery_cost * (1 - (input$renhet/100))
-    delivery_tn_truck <- root_harvest_p / input$delivery_loads
-    delivery_cost_truck <- input$delivery_cost / input$delivery_loads
-    delivery_cost_truck_clean <- delivery_cost_truck / (input$renhet/100)
-    delivery_cost_truck_soil <- delivery_cost_truck* (1 - (input$renhet/100))
     delivery_tn_mil <- root_yield_p / input$delivery_distance
     delivery_cost_mil <- input$delivery_cost / input$delivery_distance
     delivery_cost_mil_clean <- delivery_cost_mil / (input$renhet/100)
@@ -667,11 +650,10 @@ server <- function(input, output, session){
     delivery_cost_tn_clean <- delivery_cost_tn / (input$renhet/100)
     delivery_cost_tn_soil <- delivery_cost_tn * (1 - (input$renhet/100))
     delivery_cost_tab <- matrix(c(root_harvest_p, input$delivery_cost, delivery_cost_field_clean, delivery_cost_field_soil,
-                                  delivery_tn_truck, delivery_cost_truck, delivery_cost_truck_clean, delivery_cost_truck_soil,
                                   delivery_tn_mil, delivery_cost_mil, delivery_cost_mil_clean, delivery_cost_mil_soil,
-                                  1, delivery_cost_tn, delivery_cost_tn_clean, delivery_cost_tn_soil), byrow=T, nrow=4) 
-    rownames(delivery_cost_tab) <- c("Field", "Truck", "Mil", "Tonne")
-    colnames(delivery_cost_tab) <- c("Tonnes per...","Cost per...","Cost per clean tonne", "Cost of soil transport")
+                                  1, delivery_cost_tn, delivery_cost_tn_clean, delivery_cost_tn_soil), byrow=T, nrow=3) 
+    rownames(delivery_cost_tab) <- c("Field", "Mil", "Tonne")
+    colnames(delivery_cost_tab) <- c("Tonnes per...","Cost per... (SEK)","Cost per clean tonne (SEK)", "Cost of soil transport (SEK)")
     delivery_cost_tab
   }, rownames = T, digits=1
   )
@@ -846,7 +828,7 @@ server <- function(input, output, session){
     # input from required inputs
     summary_tab_cols <- input$summary_tab_show
     
-    summary_tab_names <- c("Date", "Location", "Temperature (C)", "Cum. Temp (Cd)", "Cum. % loss", "Pol","Root Yield","Sugar Yield")
+    summary_tab_names <- c("Date", "Location", "Temp. (°C)", "Cum. Temp (°Cd)", "Cum. pol loss (%)", "Pol","Root Yield","Sugar Yield")
     if("CL" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - clean tn","Bonus - clean tn","Payment - clean tn")
     if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
     if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
@@ -886,6 +868,11 @@ server <- function(input, output, session){
 
     prod_data_loc
   })
+  
+  dates <- reactive({
+    delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
+    harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
+  })
   ###############
   # VISUALS
 
@@ -921,21 +908,39 @@ server <- function(input, output, session){
   ## CHARTS ##
   
   # Late season growth
-  output$LSG_chart <- plotly::renderPlotly({
+  output$LSG_mass_daily_chart <- plotly::renderPlotly({
+    summary_tab()
     ggplot(LSG_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = LSG_mass_loss_pc_daily), color = "darkred") + 
+      geom_line(aes(y = LSG_mass_loss_pc_daily), color = "darkred") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       ylab("Daily growth (%)") + 
       xlab("Date") +
-      labs(title = "Late Season Growth Potential")
+      labs(title = "Late Season Growth Potential - daily")
+  })
+  
+  # Late season growth
+  output$LSG_mass_cum_chart <- plotly::renderPlotly({
+    summary_tab()
+    ggplot(LSG_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = LSG_mass_loss_pc_cum), color = "darkred") + 
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      ylab("Cumulative growth (%)") + 
+      xlab("Date") +
+      labs(title = "Late Season Growth Potential - cumulative")
   })
   
   # Plot of temperatures (Air and Clamp)
   output$temp_graph <- plotly::renderPlotly({
-    
+    summary_tab()
     ggplot(temp_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = temp_clamp), color = "darkred") + 
-      geom_line(aes(y = temp_air), color="steelblue", linetype="twodash") +
-      ylab("Temperature (C)") + 
+      geom_line(aes(y = temp_clamp, color = "Clamp temp")) + 
+      geom_line(aes(y = temp_air, color="Air temperature"), linetype="dotdash") +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c("Clamp temp","Air temperature"),
+                          values = c("Clamp temp"="darkred","Air temperature"="steelblue")) +
+      ylab("Temperature (°C)") + 
       xlab("Date") +
       labs(title = "Clamp temperature model")
   })
@@ -944,12 +949,15 @@ server <- function(input, output, session){
   output$loss_Cd <- plotly::renderPlotly({
     
     ggplot(loss_tab(), aes(x=cum_temp)) + 
-      geom_line(aes(y = clamp_pol_loss_pc_cum), color = "darkred") + 
-      geom_line(aes(y = ref_medel), color="steelblue", linetype="twodash") +
+      geom_line(aes(y = clamp_pol_loss_pc_cum, color = "Clamp pol loss")) + 
+      geom_line(aes(y = ref_medel, color="Ref pol loss"), linetype="dotdash") +
+      scale_colour_manual("", 
+                          breaks = c("Clamp pol loss","Ref pol loss"),
+                          values = c("Clamp pol loss"="darkred","Ref pol loss"="steelblue")) +
       xlim(0,500) +
       ylim(0,15) +
-      ylab("Sugar loss (%)") + 
-      xlab("Accumulated temperature (Cd)") +
+      ylab("Sugar loss (% of original)") + 
+      xlab("Accumulated temperature (°Cd)") +
       labs(title = "Storage loss model")
   })
   
@@ -963,7 +971,7 @@ server <- function(input, output, session){
       scale_colour_manual("", 
                           breaks = c("Cum. temperature"),
                           values = c("Cum. temperature"="red3")) +
-      ylab("Cumulative temperature (Cd)") + 
+      ylab("Cumulative temperature (°Cd)") + 
       xlab("Date") +
       labs(title = "CLAMP TEMPERATURE") +
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
@@ -979,7 +987,7 @@ server <- function(input, output, session){
       scale_colour_manual("", 
                           breaks = c("Pol","Cum. % loss"),
                           values = c("Pol"="red3","Cum. % loss"="blue3")) +
-      ylab("Sugar loss (%)") + 
+      ylab("Sugar (%)") + 
       xlab("Date") +
       labs(title = "SUGAR CONTENT") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
@@ -993,7 +1001,7 @@ server <- function(input, output, session){
       scale_colour_manual("", 
                           breaks = c("Cum. mass"),
                           values = c("Cum. mass"="red3")) +
-      ylab("Root yield (tn)") + 
+      ylab("Root yield (t/ha)") + 
       xlab("Date") +
       labs(title = "ROOT YIELD") +
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
@@ -1007,7 +1015,7 @@ server <- function(input, output, session){
       scale_colour_manual("", 
                           breaks = c("Cum. sug"),
                           values = c("Cum. sug"="red3")) +
-      ylab("Sugar yield (tn)") + 
+      ylab("Sugar yield (t/ha)") + 
       xlab("Date") +
       labs(title = "SUGAR YIELD") +
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
@@ -1015,16 +1023,16 @@ server <- function(input, output, session){
   
   output$summary_graph_price_ha <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_ha, colour = "Total payment")) +
       geom_line(aes(y = price_base_ha, colour = "Base payment")) + 
       geom_line(aes(y = price_bonus_ha, colour = "Bonus payment")) +
+      geom_line(aes(y = price_ha, colour = "Total payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
                           values = c("Total payment"="red3", "Base payment"="blue3", 
                                      "Bonus payment"="green3")) +
-      ylab("Price (kr)") + 
+      ylab("Price (kr/ha)") + 
       xlab("Date") +
       labs(title = "INCOME PER HECTARE") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
@@ -1032,9 +1040,9 @@ server <- function(input, output, session){
   
   output$summary_graph_price_fi <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_field, colour = "Total payment")) +
       geom_line(aes(y = price_base_field, colour = "Base payment")) + 
       geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
+      geom_line(aes(y = price_field, colour = "Total payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
@@ -1049,16 +1057,16 @@ server <- function(input, output, session){
   
   output$summary_graph_price_cl <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_clean, colour = "Total payment")) +
       geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
       geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
+      geom_line(aes(y = price_clean, colour = "Total payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
                           values = c("Total payment"="red3", "Base payment"="blue3", 
                                      "Bonus payment"="green3")) +
-      ylab("Price (kr)") + 
+      ylab("Price (kr/t)") + 
       xlab("Date") +
       labs(title = "INCOME PER CLEAN (17%) TONNE") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
@@ -1066,9 +1074,9 @@ server <- function(input, output, session){
   
   output$summary_graph_price_de <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_delivered, colour = "Total payment")) +
       geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
       geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment")) +
+      geom_line(aes(y = price_delivered, colour = "Total payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
@@ -1076,7 +1084,7 @@ server <- function(input, output, session){
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
                           values = c("Total payment"="red3", "Base payment"="blue3", 
                                      "Bonus payment"="green3")) +
-      ylab("Price (kr)") + 
+      ylab("Price (kr/t)") + 
       xlab("Date") +
       labs(title = "INCOME PER DELIVERED (17%) TONNE") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
@@ -1230,110 +1238,58 @@ server <- function(input, output, session){
   
   ###############################
   # COMPARISONS
+  #
+  #
   
-  #para_tab = reactive({
-  #  para_tab_factor <- factor()*0.018
-  #  para_tab <- data.frame(input$pol,input$renhet, input$delivery_date, para_tab_factor, input$root_yield*input$field_size)
-  #  colnames(para_tab) <- c("Pol", "Cleanness", "Delivery date", "Storage loss rate (%/Cd)", "Harvest")
-  #  para_tab
-  #  })
-  #
-  #observeEvent(input$comp_1, {
-  #               comp_1_tab$data <- summary_tab()
-  #               comp_1_tab$para <- para_tab()
-  #               comp_1_tab$payment <- full_tab()
-  #             })
-  #  
-  #observeEvent(input$comp_2, {
-  #              comp_2_tab$data <- summary_tab()
-  #              comp_2_tab$para <- para_tab()
-  #              comp_2_tab$payment <- full_tab()
-  #            })
-  #
-  #output$comp_1_tab = renderTable({
-  #  comp_1_tab$data
-  #})
-  #
-  #output$comp_1_para = renderTable({
-  #  comp_1_tab$para
-  #})
-  #
-  #output$comp_2_tab = renderTable({
-  #  comp_2_tab$data
-  #})
-  #
-  #output$comp_2_para = renderTable({
-  #  comp_2_tab$para
-  #})
-  #
-  #
-  #output$summary_graph_price_comp_1 = renderPlot({
-  #  ggplot(comp_1_tab$data, aes(x=get("Date"))) + 
-  #    geom_line(aes(y = get("Payment - clean tn"), colour = "Total payment")) +
-  #    geom_line(aes(y = get("Base price - clean tn"), colour = "Base payment")) + 
-  #    geom_line(aes(y = get("Bonus - clean tn"), colour = "Bonus payment")) +
-  #    geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #    #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                        values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                   "Bonus payment"="green3")) +
-  #    ylab("Price (kr)") + 
-  #    xlab("Date") +
-  #    labs(title = "Price per clean tonne") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
-  #
-  #output$summary_graph_payment_comp_1 = renderPlot({
-  #    ggplot(comp_1_tab$payment, aes(x=date_full)) + 
-  #      geom_line(aes(y = price_field, colour = "Total payment")) +
-  #      geom_line(aes(y = price_base_field, colour = "Base payment")) + 
-  #      geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
-  #      geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #      scale_colour_manual("", 
-  #                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                          values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                     "Bonus payment"="green3")) +
-  #      ylab("Payment (kr)") + 
-  #      xlab("Date") +
-  #      labs(title = "Payment per field") + 
-  #      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
-  #
-  #output$summary_graph_price_comp_2 = renderPlot({
-  #  ggplot(comp_2_tab$data, aes(x=get("Date"))) + 
-  #    geom_line(aes(y = get("Payment - clean tn"), colour = "Total payment")) +
-  #    geom_line(aes(y = get("Base price - clean tn"), colour = "Base payment")) + 
-  #    geom_line(aes(y = get("Bonus - clean tn"), colour = "Bonus payment")) +
-  #    geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #    #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                        values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                   "Bonus payment"="green3")) +
-  #    ylab("Price (kr)") + 
-  #    xlab("Date") +
-  #    labs(title = "Price per clean tonne") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
-  #
-  #output$summary_graph_payment_comp_2 = renderPlot({
-  #  ggplot(comp_2_tab$payment, aes(x=date_full)) + 
-  #    geom_line(aes(y = price_field, colour = "Total payment")) +
-  #    geom_line(aes(y = price_base_field, colour = "Base payment")) + 
-  #    geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
-  #    geom_vline(xintercept = as.POSIXct(delivery_date)) +
-  #    #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Total payment", "Base payment", "Bonus payment"),
-  #                        values = c("Total payment"="red3", "Base payment"="blue3", 
-  #                                   "Bonus payment"="green3")) +
-  #    ylab("Payment (kr)") + 
-  #    xlab("Date") +
-  #    labs(title = "Payment per field") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
+  comp_1_tab <- eventReactive(input$comp_1,{
+    summary_final_tab()
+    })
+  comp_1_tab_graph <- eventReactive(input$comp_1,{
+    summary_tab()
+  })
+  
+  output$comp_1_tab = renderTable({
+      comp_1_tab()
+      }, rownames = T)
+  
+  output$summary_graph_sug_comp_1 <- plotly::renderPlotly({
+    ggplot(comp_1_tab_graph(), aes(x=date_full)) + 
+      geom_line(aes(y=sug_cum, color = "Cum. sug")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c("Cum. sug"),
+                          values = c("Cum. sug"="red3")) +
+      ylab("Sugar yield (t/ha)") + 
+      xlab("Date") +
+      labs(title = "SUGAR YIELD") +
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
+  
+  comp_2_tab <- eventReactive(input$comp_2,{
+    summary_final_tab()
+  })
+  comp_2_tab_graph <- eventReactive(input$comp_2,{
+    summary_tab()
+  })
+  
+  output$comp_2_tab = renderTable({
+    comp_2_tab()
+  }, rownames = T)
+  
+  output$summary_graph_sug_comp_2 <- plotly::renderPlotly({
+    ggplot(comp_2_tab_graph(), aes(x=date_full)) + 
+      geom_line(aes(y=sug_cum, color = "Cum. sug")) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c("Cum. sug"),
+                          values = c("Cum. sug"="red3")) +
+      ylab("Sugar yield (t/ha)") + 
+      xlab("Date") +
+      labs(title = "SUGAR YIELD") +
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+  })
   
 }
 
