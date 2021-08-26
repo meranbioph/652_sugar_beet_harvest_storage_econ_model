@@ -260,7 +260,6 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield_p, field
   full_tab$cum_temp <- c(rep(0, (days_full - days_p_h)), cumsum(full_tab$temp_clamp_p[which(full_tab$date_full>=harvest_date)]))
   full_tab$cum_temp <- round(full_tab$cum_temp)
   
-  # POL LOSS
   ## Clamp Pol Loss for given temp 
   full_tab <- merge(full_tab, loss_tab_p, by="cum_temp")
   full_tab <- full_tab[,c("date_full","location","price_early","price_late","price_TT","price_vol","temp_clamp_p","cum_temp","clamp_pol_loss_pc_cum")]
@@ -280,7 +279,7 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield_p, field
   full_tab$pol_loss_pp_cum <- full_tab$pol_loss_pp_cum - full_tab$pol_loss_pp_cum[which(full_tab$date_full==harvest_date)]
   full_tab$pol_loss_pp_rel_day0 <- full_tab$clamp_pol_loss_pp_rel_day0 + full_tab$LSG_pol_loss_pp_rel_day0
   full_tab$pol_cum <- pol_p - full_tab$pol_loss_pp_rel_day0
-  full_tab$pol_loss_pc_cum <- full_tab$pol_loss_pp_cum / full_tab$pol_cum[which(full_tab$date_full==harvest_date)]
+  full_tab$pol_loss_pc_cum <- full_tab$pol_loss_pp_cum / full_tab$pol_cum[which(full_tab$date_full==harvest_date)]*100
   
   ## Pol factor across whole period
   full_tab$pol_factor <- (full_tab$pol_cum - ref_pol*100)*kr_pol
@@ -294,19 +293,20 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield_p, field
   
   ## Mass loss at harvest
   harvest_loss <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_pc_p)]
+  full_tab$harvest_mass_loss <- ifelse(full_tab$date_full < harvest_date, harvest_loss, 0)
   
   ## Mass gain under late season growth
   full_tab$LSG_mass_loss_pc_cum <- ifelse(full_tab$date_full <= harvest_date, full_tab$LSG_mass_loss_pc_cum, full_tab$LSG_mass_loss_pc_cum[which(full_tab$date_full == harvest_date)])
-  full_tab$LSG_mass_loss_kg_cum <- full_tab$LSG_mass_loss_pc_cum*root_yield_p/100
+  full_tab$LSG_mass_loss_kg_cum <- full_tab$LSG_mass_loss_pc_cum*root_yield_p/100*(-1)
   LSG_mass_loss_kg_cum_ref <- full_tab$LSG_mass_loss_kg_cum[which(full_tab$date_full==day0)]
   full_tab$LSG_mass_loss_kg_rel_day0 <- full_tab$LSG_mass_loss_kg_cum - LSG_mass_loss_kg_cum_ref
   
   ## Total daily mass change (kg)
-  full_tab$mass_loss_kg_rel_day0 <- full_tab$clamp_mass_loss_kg_rel_day0 + full_tab$LSG_mass_loss_kg_rel_day0
+  full_tab$mass_loss_kg_rel_day0 <- full_tab$clamp_mass_loss_kg_rel_day0 + full_tab$LSG_mass_loss_kg_rel_day0 - full_tab$harvest_mass_loss
   full_tab$mass_kg_cum <- root_yield_p - full_tab$mass_loss_kg_rel_day0
   
   ## SUGAR YIELD
-  full_tab$cum_sug <- full_tab$pol_cum/100*full_tab$cum_mass
+  full_tab$cum_sug <- full_tab$pol_cum/100*full_tab$mass_kg_cum
   
   #TT bonus
   full_tab$price_TT[full_tab$date_full < as.POSIXct(cover_date)+7] <- 0
@@ -329,9 +329,9 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield_p, field
   full_tab$price_delivered <- full_tab$price_clean*renhet
   
   # Ha prices
-  full_tab$price_base_ha <- full_tab$price_base_delivered*full_tab$cum_mass
-  full_tab$price_bonus_ha <- full_tab$price_bonus_delivered*full_tab$cum_mass
-  full_tab$price_ha <- full_tab$price_delivered*full_tab$cum_mass
+  full_tab$price_base_ha <- full_tab$price_base_delivered*full_tab$mass_kg_cum
+  full_tab$price_bonus_ha <- full_tab$price_bonus_delivered*full_tab$mass_kg_cum
+  full_tab$price_ha <- full_tab$price_delivered*full_tab$mass_kg_cum
   
   # Field prices
   full_tab$price_base_field <- full_tab$price_base_ha*field_size
@@ -340,7 +340,6 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield_p, field
   
   full_tab
   
-
 # SUMMARY (VISUALISED) RESULTS
 ##!!! This should really just restrict the full results table within the parameters given.
 
@@ -355,7 +354,7 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield_p, field
   delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
   
   # Define summary table - columns
-  summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "pol_loss_pp_rel_day0", "pol_cum","cum_mass","cum_sug")
+  summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "pol_loss_pp_rel_day0", "pol_cum","mass_kg_cum","cum_sug")
   if("CL" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_clean","price_bonus_clean","price_clean")
   if("DE" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_delivered","price_bonus_delivered","price_delivered")
   if("HA" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_ha","price_bonus_ha","price_ha")
@@ -381,7 +380,7 @@ input <- data.frame(harvest_date, delivery_date, cover_date, root_yield_p, field
   
   summary_tab
 
-summary_tab_output = reactive({
+# SUMMARY TABLE
   summary_tab_output <- data.frame(summary_tab())
   
   # input from required inputs
@@ -400,10 +399,17 @@ summary_tab_output = reactive({
   
   summary_tab_output
   
-})
+# PRoDUCTION DATA LOCATION
+
+summary_tab_p <- summary_tab
+prod_data_date_p <- as.POSIXct(input$prod_data_date, tz = "UTC", format = "%Y-%m-%d")
+
+prod_data_loc <- summary_tab_p$location[which(summary_tab_p$date_full == prod_data_date_p)]
+
+prod_data_loc <- summary_tab_p$location[10]
+prod_data_loc
 
 # Summary Table of the bottom line
-summary_final_tab = reactive({
   delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
   summary_final_tab <- data.frame(full_tab())
   summary_final_tab <- summary_final_tab[which(summary_final_tab$date_full == delivery_date),]
@@ -416,8 +422,6 @@ summary_final_tab = reactive({
   colnames(summary_final_tab) <- c("Base price","Bonuses","Total payment")
   
   summary_final_tab
-  
-})
 
 # Root harvest yield table (CAN THIS SIT IN THE FULL_TAB REACTIVE?)
 full_tab_p <- full_tab
@@ -425,8 +429,8 @@ root_yield_p <- input$root_yield
 field_size_p <- input$field_size
 harvest_date_p <- input$harvest_date
 
-root_mass_harvest <- full_tab_p$cum_mass[which(full_tab_p$date_full == as.POSIXct(harvest_date_p))] 
-root_mass_grown <- full_tab_p$cum_mass[which(full_tab_p$date_full == (as.POSIXct(harvest_date_p) - 86400))]
+root_mass_harvest <- full_tab_p$mass_kg_cum[which(full_tab_p$date_full == as.POSIXct(harvest_date_p))] 
+root_mass_grown <- full_tab_p$mass_kg_cum[which(full_tab_p$date_full == (as.POSIXct(harvest_date_p) - 86400))]
 
 root_mass_factory_field <- root_yield_p*field_size_p
 root_mass_harvest_field <- root_mass_harvest*field_size_p
@@ -529,7 +533,7 @@ output$summary_graph_pol <- plotly::renderPlotly({
 
 output$summary_graph_mass <- plotly::renderPlotly({
   ggplot(summary_tab(), aes(x=date_full)) + 
-    geom_line(aes(y=cum_mass, color = "Cum. mass")) +
+    geom_line(aes(y=mass_kg_cum, color = "Cum. mass")) +
     geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
     geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
     scale_colour_manual("", 

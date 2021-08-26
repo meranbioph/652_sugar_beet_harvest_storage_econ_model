@@ -256,7 +256,7 @@ ui <- fluidPage(
                 ),
                 sliderInput("late_moisture", "Soil moisture at harvest, as percent of ideal", min=0, max=200, value=100),
                 sliderInput("harvester_cleaning", "Cleaning intensity", min=0, max=100, value=40),
-                sliderInput("root_tip_break_perc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25)
+                sliderInput("root_tip_break_pc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25)
                 ),
               mainPanel(
                 column(12, h4("Harvest loss"),tableOutput("summary_harvest_loss"), style = "margin-top: 375px")
@@ -327,14 +327,14 @@ ui <- fluidPage(
                   ),
                   fluidRow(
                     column(6,dateInput("prod_data_date","Date payment schedule data from:",value = "2022-01-15")),
-                    column(6,"TEXT")
+                    column(6,textOutput("prod_data_loc"),style = "margin-top: 30px")
                   ),
                   sliderInput("root_yield","Root yield (t/ha)", min=40, max=120, step = 1, value = 86),
                   sliderInput("pol", "Sugar content", min=15, max=22, value=17, step = 0.1),
                   sliderInput("renhet", "Renhet %", min=78, max=100, value=89.5, step = 0.1)
                 ),
                 mainPanel(
-                   column(12, h4("Root yield"), tableOutput("root_harvest_tab"))
+                   column(12, h4("Production summary"), tableOutput("root_harvest_tab"))
                 ),
                 style = 'padding-left:15px'
               ),
@@ -368,12 +368,12 @@ ui <- fluidPage(
     ),
     tabPanel("GRAPHS - PRODUCTION", fluid = T,
              fluidRow(
-               column(6,plotly::plotlyOutput("summary_graph_temp")),
+               column(6,plotly::plotlyOutput("summary_graph_sug")),
                column(6,plotly::plotlyOutput("summary_graph_pol"))
              ),
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_mass")),
-               column(6,plotly::plotlyOutput("summary_graph_sug"))
+               column(6,plotly::plotlyOutput("summary_graph_temp"))
              )
     ),
     tabPanel("GRAPHS - ECONOMY", fluid = T,
@@ -440,17 +440,30 @@ server <- function(input, output, session){
     root_yield_p <- input$root_yield 
     field_size_p <- input$field_size
     harvest_date_p <- input$harvest_date
+    delivery_date_p <- input$delivery_date
     
-    root_mass_harvest <- full_tab_p$cum_mass[which(full_tab_p$date_full == as.POSIXct(harvest_date_p))] 
-    root_mass_grown <- full_tab_p$cum_mass[which(full_tab_p$date_full == (as.POSIXct(harvest_date_p) - 86400))]
+    root_mass_factory <- full_tab_p$mass_kg_cum[which(full_tab_p$date_full == as.POSIXct(delivery_date_p))]
+    root_mass_harvest <- full_tab_p$mass_kg_cum[which(full_tab_p$date_full == as.POSIXct(harvest_date_p))] 
+    root_mass_grown <- full_tab_p$mass_kg_cum[which(full_tab_p$date_full == (as.POSIXct(harvest_date_p) - 86400))]
     
-    root_mass_factory_field <- root_yield_p*field_size_p
+    root_mass_factory_field <- root_mass_factory*field_size_p
     root_mass_harvest_field <- root_mass_harvest*field_size_p
     root_mass_grown_field <- root_mass_grown*field_size_p
     
-    root_harvest_tab <- matrix(c(root_mass_grown, root_mass_harvest, root_yield_p,
-                                 root_mass_grown_field, root_mass_harvest_field, root_mass_factory_field), byrow=F, nrow=3) 
-    colnames(root_harvest_tab) <- c("Ha","Field")
+    pol_factory <- full_tab_p$pol_cum[which(full_tab_p$date_full == as.POSIXct(delivery_date_p))]
+    pol_harvest <- full_tab_p$pol_cum[which(full_tab_p$date_full == as.POSIXct(harvest_date_p))] 
+    pol_grown <- full_tab_p$pol_cum[which(full_tab_p$date_full == (as.POSIXct(harvest_date_p) - 86400))]
+
+    sug_factory <- full_tab_p$sug_cum[which(full_tab_p$date_full == as.POSIXct(delivery_date_p))]
+    sug_harvest <- full_tab_p$sug_cum[which(full_tab_p$date_full == as.POSIXct(harvest_date_p))] 
+    sug_grown <- full_tab_p$sug_cum[which(full_tab_p$date_full == (as.POSIXct(harvest_date_p) - 86400))]
+        
+    root_harvest_tab <- matrix(c(sug_grown, sug_harvest, sug_factory,
+                                 pol_grown, pol_harvest, pol_factory,
+                                 root_mass_grown, root_mass_harvest, root_mass_factory,
+                                 root_mass_grown_field, root_mass_harvest_field, root_mass_factory_field
+                                 ), byrow=F, nrow=3) 
+    colnames(root_harvest_tab) <- c("Sugar yield (t/ha)","Pol (%)", "Root Yield (t/ha)","Root Yield (t/field)")
     rownames(root_harvest_tab) <- c("Grown","Harvested", "Factory")
     
     root_harvest_tab
@@ -468,7 +481,8 @@ server <- function(input, output, session){
     
     loc_tab$location[which(loc_tab$date_full <= harvest_date)] <- "Field"
     loc_tab$location[which(loc_tab$date_full == harvest_date)] <- "Harvest"
-    loc_tab$location[which(loc_tab$date_full >= delivery_date)] <- "Delivered"
+    loc_tab$location[which(loc_tab$date_full >= delivery_date)] <- "Factory"
+    loc_tab$location[which(loc_tab$date_full == delivery_date)] <- "Delivery"
     
     loc_tab
   })
@@ -659,10 +673,10 @@ server <- function(input, output, session){
     kr_tonne <- input$price
     renhet <- input$renhet/100
     pol_p <- input$pol
-    root_yield <- input$root_yield
+    root_yield_p <- input$root_yield
     vol <- input$vol
     field_size <- input$field_size
-    root_harvest <- root_yield*field_size
+    root_harvest <- root_yield_p*field_size
     root_tip_break_pc_p <- input$root_tip_break_pc
     
     # calculate a few key parameters
@@ -701,28 +715,32 @@ server <- function(input, output, session){
     full_tab$pol_cum <- pol_p - full_tab$pol_loss_pp_rel_day0
     full_tab$pol_loss_pc_cum <- full_tab$pol_loss_pp_cum / full_tab$pol_cum[which(full_tab$date_full==harvest_date)]*100
     
-    ## Mass loss for given temp
-    full_tab <- merge(full_tab, mass_loss_tab_p, by="cum_temp")
-    cum_mass_loss_max <- max(full_tab$cum_mass_loss[which(full_tab$date_full<=delivery_date)])
-    full_tab$cum_mass <- root_yield + root_yield*(cum_mass_loss_max/100) - root_yield*(full_tab$cum_mass_loss/100)
-    
-    ## Mass loss at harvest
-    harvest_loss <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_pc_p)]
-    
-    ## Mass gain under late season growth
-    root_mass_harvest <- full_tab$cum_mass[which(full_tab$date_full == harvest_date)] 
-    root_mass_grown <- root_mass_harvest + harvest_loss
-    LSG_root_cum_max <- full_tab$LSG_root_cum[which(full_tab$date_full == harvest_date)]
-    #full_tab$cum_mass[which(full_tab$date_full < harvest_date)] <-
-    #  root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100)
-    full_tab$cum_mass <- ifelse(full_tab$date_full < harvest_date, 
-      root_mass_grown - root_mass_grown*(LSG_root_cum_max/100) + root_mass_grown*(full_tab$LSG_root_cum/100), full_tab$cum_mass)
-    
     ## Pol factor across whole period
     full_tab$pol_factor <- (full_tab$pol_cum - ref_pol*100)*kr_pol
     
+    # MASS LOSS
+    ## Clamp Mass Loss for given temp
+    full_tab <- merge(full_tab, mass_loss_tab_p, by="cum_temp")
+    full_tab$clamp_mass_loss_kg_cum <- full_tab$clamp_mass_loss_pc_cum*root_yield_p/100
+    clamp_mass_loss_kg_cum_ref <- full_tab$clamp_mass_loss_kg_cum[which(full_tab$date_full==day0)]
+    full_tab$clamp_mass_loss_kg_rel_day0 <- full_tab$clamp_mass_loss_kg_cum - clamp_mass_loss_kg_cum_ref
+    
+    ## Mass loss at harvest
+    harvest_loss <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_pc_p)]
+    full_tab$harvest_mass_loss <- ifelse(full_tab$date_full < harvest_date, harvest_loss, 0)
+    
+    ## Mass gain under late season growth
+    full_tab$LSG_mass_loss_pc_cum <- ifelse(full_tab$date_full <= harvest_date, full_tab$LSG_mass_loss_pc_cum, full_tab$LSG_mass_loss_pc_cum[which(full_tab$date_full == harvest_date)])
+    full_tab$LSG_mass_loss_kg_cum <- full_tab$LSG_mass_loss_pc_cum*root_yield_p/100*(-1)
+    LSG_mass_loss_kg_cum_ref <- full_tab$LSG_mass_loss_kg_cum[which(full_tab$date_full==day0)]
+    full_tab$LSG_mass_loss_kg_rel_day0 <- full_tab$LSG_mass_loss_kg_cum - LSG_mass_loss_kg_cum_ref
+    
+    ## Total daily mass change (kg)
+    full_tab$mass_loss_kg_rel_day0 <- full_tab$clamp_mass_loss_kg_rel_day0 + full_tab$LSG_mass_loss_kg_rel_day0 - full_tab$harvest_mass_loss
+    full_tab$mass_kg_cum <- root_yield_p - full_tab$mass_loss_kg_rel_day0
+
     ## SUGAR YIELD
-    full_tab$cum_sug <- full_tab$pol_cum/100*full_tab$cum_mass
+    full_tab$sug_cum <- full_tab$pol_cum/100*full_tab$mass_kg_cum
     
     #TT bonus
     full_tab$price_TT[full_tab$date_full < as.POSIXct(cover_date)+7] <- 0
@@ -745,9 +763,9 @@ server <- function(input, output, session){
     full_tab$price_delivered <- full_tab$price_clean*renhet
     
     # Ha prices
-    full_tab$price_base_ha <- full_tab$price_base_delivered*full_tab$cum_mass
-    full_tab$price_bonus_ha <- full_tab$price_bonus_delivered*full_tab$cum_mass
-    full_tab$price_ha <- full_tab$price_delivered*full_tab$cum_mass
+    full_tab$price_base_ha <- full_tab$price_base_delivered*full_tab$mass_kg_cum
+    full_tab$price_bonus_ha <- full_tab$price_bonus_delivered*full_tab$mass_kg_cum
+    full_tab$price_ha <- full_tab$price_delivered*full_tab$mass_kg_cum
 
     # Field prices
     full_tab$price_base_field <- full_tab$price_base_ha*field_size
@@ -772,7 +790,7 @@ server <- function(input, output, session){
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
     
     # Define summary table - columns
-    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "pol_loss_pc_cum", "pol_cum","cum_mass","cum_sug")
+    summary_tab_show <- c("date_full", "location", "temp_clamp_p", "cum_temp", "pol_loss_pc_cum", "pol_cum","mass_kg_cum","sug_cum")
     if("CL" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_clean","price_bonus_clean","price_clean")
     if("DE" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_delivered","price_bonus_delivered","price_delivered")
     if("HA" %in% summary_tab_cols) summary_tab_show <- c(summary_tab_show, "price_base_ha","price_bonus_ha","price_ha")
@@ -837,8 +855,22 @@ server <- function(input, output, session){
     summary_final_tab
     
     })
+  
+  prod_data_loc = reactive({
+    summary_tab_p <- summary_tab()
+    prod_data_date_p <- as.POSIXct(input$prod_data_date, tz = "UTC", format = "%Y-%m-%d")
+    
+    prod_data_loc <- summary_tab_p$location[which(summary_tab_p$date_full == prod_data_date_p)]
+
+    prod_data_loc
+  })
   ###############
   # VISUALS
+  
+  # Location that the production data applies to
+  output$prod_data_loc <- renderText({
+    paste("Location:", prod_data_loc())
+  })
   
   #Summary root harvest
   output$root_harvest_tab <- renderTable({
@@ -860,7 +892,7 @@ server <- function(input, output, session){
   # Late season growth
   output$LSG_chart <- plotly::renderPlotly({
     ggplot(LSG_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = LSG_root_daily), color = "darkred") + 
+      geom_line(aes(y = LSG_mass_loss_pc_daily), color = "darkred") + 
       ylab("Daily growth (%)") + 
       xlab("Date") +
       labs(title = "Late Season Growth Potential")
@@ -908,14 +940,14 @@ server <- function(input, output, session){
   
   output$summary_graph_pol <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss")) + 
       geom_line(aes(y = pol_cum, color = "Pol")) +
+      geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss")) + 
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
       scale_colour_manual("", 
-                          breaks = c("Cum. % loss", "Pol"),
-                          values = c("Cum. % loss"="red3", "Pol"="blue3")) +
+                          breaks = c("Pol","Cum. % loss"),
+                          values = c("Pol"="red3","Cum. % loss"="blue3")) +
       ylab("Sugar loss (%)") + 
       xlab("Date") +
       labs(title = "SUGAR CONTENT") + 
@@ -940,7 +972,7 @@ server <- function(input, output, session){
   
   output$summary_graph_mass <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=cum_mass, color = "Cum. mass")) +
+      geom_line(aes(y=mass_kg_cum, color = "Cum. mass")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
@@ -954,7 +986,7 @@ server <- function(input, output, session){
   
   output$summary_graph_sug <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=cum_sug, color = "Cum. sug")) +
+      geom_line(aes(y=sug_cum, color = "Cum. sug")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
