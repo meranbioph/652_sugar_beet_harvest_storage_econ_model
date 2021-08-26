@@ -190,8 +190,24 @@ ui <- fluidPage(
                       "It's purpose is to help explore the factors that drive successful harvest and storage strategies.",
                       "The model is general and may not be suitable to apply to your own production system.",
                       br(),br(),
+                      "This model is not able to refelct that variability in the production system that occur from day to day in reality.",
+                      "It similarly is not able to reflect your willingness to accept these production risks.",
+                      br(), br(),
                       "The 2021 price model for Sweden is applied. Prices are assumed fixed in SEK.",
                       br(), br()
+               )
+             ),
+             fluidRow(
+               column(12, h4("INSTRUCTIONS"),
+                      "Basically, just work through the tabs.",
+                      "The default values set are those that approximately reflect the industry averages.",
+                      "If you are unsure what is an appropriate value, either take the default, or set the value to an extreme value and see what happens.",
+                      br(),br(),
+                      "While a model can give an indication for what might happen, one of the best uses for them is think about all the things that the model doesn't capture.",
+                      "Similarly, when you can see the modelled outcome is different to the actual outcome, this is the time to ask 'why?' and hopefully find some real insight.",
+                      br(),br(),
+                      "Please note that the cost information in the Delivery tab is not well developed.",
+                      br(),br()
                )
              ),
              fluidRow(
@@ -216,9 +232,16 @@ ui <- fluidPage(
                )
              ),
              fluidRow(
-               column(12, h4("INSTRUCTIONS"),
-                "Just work through the tabs."
-               )
+               column(12, h4("IMPROVEMENTS"),
+                "The following improvements are on the to-do list:", br(),
+                "- Introduce a tab in which scenarios can be compared", br(),
+                "- Allow the price schedule to change to reflect those of recent years.",br(),
+                "- Have a 'simplified version' tab, in which some outputs are just set to defaults and some outputs disappear.",br(),
+                "- Introduce a model of dirt-tare. This would probably be something like an industry average, with spikes after rainfall events.", br(),
+                "- Improve the cost side of the equation, starting with the Delivery tab.",br(),
+                "- Introduce more factors that we know matter (eg, irrigation, Ca).",
+                br(),br(),
+                "If you have others, please contact William English as we@nbrf.nu")
              )
       
     ),
@@ -323,7 +346,7 @@ ui <- fluidPage(
                  sidebarPanel(
                   fluidRow(
                     column(10, h4("PRODUCTION")),
-                    column(2, actionButton("help_harvest_yield", "?"))
+                    column(2, actionButton("help_production", "?"))
                   ),
                   fluidRow(
                     column(6,dateInput("prod_data_date","Date payment schedule data from:",value = "2022-01-15")),
@@ -464,7 +487,7 @@ server <- function(input, output, session){
                                  root_mass_grown_field, root_mass_harvest_field, root_mass_factory_field
                                  ), byrow=F, nrow=3) 
     colnames(root_harvest_tab) <- c("Sugar yield (t/ha)","Pol (%)", "Root Yield (t/ha)","Root Yield (t/field)")
-    rownames(root_harvest_tab) <- c("Grown","Harvested", "Factory")
+    rownames(root_harvest_tab) <- c("Grown","Harvested", "Delivery")
     
     root_harvest_tab
   })
@@ -622,29 +645,28 @@ server <- function(input, output, session){
     summary_harvest_loss
   })
   
-  # Summary harvest loss
-  output$summary_harvest_loss = renderTable({
-    summary_harvest_loss()
-  }, digits = 1)
-  
   # Delivery cost table
   
   output$delivery_cost_tab <- renderTable({
-    root_harvest <- input$root_yield * input$field_size
+    root_harvest_tab_p <- data.frame(root_harvest_tab())
+    root_harvest_p <- root_harvest_tab_p[3,4]
+    root_yield_p <- root_harvest_tab_p[3,3]
+    
+    #root_harvest <- input$root_yield * input$field_size
     delivery_cost_field_clean <- input$delivery_cost / (input$renhet/100)
     delivery_cost_field_soil <- input$delivery_cost * (1 - (input$renhet/100))
-    delivery_tn_truck <- root_harvest / input$delivery_loads
+    delivery_tn_truck <- root_harvest_p / input$delivery_loads
     delivery_cost_truck <- input$delivery_cost / input$delivery_loads
     delivery_cost_truck_clean <- delivery_cost_truck / (input$renhet/100)
     delivery_cost_truck_soil <- delivery_cost_truck* (1 - (input$renhet/100))
-    delivery_tn_mil <- input$root_yield / input$delivery_distance
+    delivery_tn_mil <- root_yield_p / input$delivery_distance
     delivery_cost_mil <- input$delivery_cost / input$delivery_distance
     delivery_cost_mil_clean <- delivery_cost_mil / (input$renhet/100)
     delivery_cost_mil_soil <- delivery_cost_mil * (1 - (input$renhet/100))
-    delivery_cost_tn <- input$delivery_cost / root_harvest
+    delivery_cost_tn <- input$delivery_cost / root_harvest_p
     delivery_cost_tn_clean <- delivery_cost_tn / (input$renhet/100)
     delivery_cost_tn_soil <- delivery_cost_tn * (1 - (input$renhet/100))
-    delivery_cost_tab <- matrix(c(root_harvest, input$delivery_cost, delivery_cost_field_clean, delivery_cost_field_soil,
+    delivery_cost_tab <- matrix(c(root_harvest_p, input$delivery_cost, delivery_cost_field_clean, delivery_cost_field_soil,
                                   delivery_tn_truck, delivery_cost_truck, delivery_cost_truck_clean, delivery_cost_truck_soil,
                                   delivery_tn_mil, delivery_cost_mil, delivery_cost_mil_clean, delivery_cost_mil_soil,
                                   1, delivery_cost_tn, delivery_cost_tn_clean, delivery_cost_tn_soil), byrow=T, nrow=4) 
@@ -866,12 +888,21 @@ server <- function(input, output, session){
   })
   ###############
   # VISUALS
+
+  ## TEXT ##
   
   # Location that the production data applies to
   output$prod_data_loc <- renderText({
     paste("Location:", prod_data_loc())
   })
   
+  ## TABLES ##
+  
+  # Summary harvest loss
+  output$summary_harvest_loss = renderTable({
+    summary_harvest_loss()
+  }, digits = 1)
+    
   #Summary root harvest
   output$root_harvest_tab <- renderTable({
     root_harvest_tab()
@@ -887,7 +918,7 @@ server <- function(input, output, session){
     summary_final_tab()
   },rownames = T, digits=0)
   
-  ## CHARTS
+  ## CHARTS ##
   
   # Late season growth
   output$LSG_chart <- plotly::renderPlotly({
@@ -953,23 +984,7 @@ server <- function(input, output, session){
       labs(title = "SUGAR CONTENT") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
-  
-  #output$summary_graph_pol <- plotly::renderPlotly({
-  #  ggplot(summary_tab(), aes(x=date_full)) + 
-  #    geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss")) + 
-  #    geom_line(aes(y = pol_cum * amplify - move, color = "Pol")) +
-  #    geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
-  #    geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-  #    scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
-  #    scale_colour_manual("", 
-  #                        breaks = c("Cum. % loss", "Pol"),
-  #                        values = c("Cum. % loss"="red3", "Pol"="blue3")) +
-  #    ylab("Sugar loss (%)") + 
-  #    xlab("Date") +
-  #    labs(title = "SUGAR CONTENT") + 
-  #    theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  #})
-  
+
   output$summary_graph_mass <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
       geom_line(aes(y=mass_kg_cum, color = "Cum. mass")) +
@@ -1005,7 +1020,6 @@ server <- function(input, output, session){
       geom_line(aes(y = price_bonus_ha, colour = "Bonus payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
                           values = c("Total payment"="red3", "Base payment"="blue3", 
@@ -1023,7 +1037,6 @@ server <- function(input, output, session){
       geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
                           values = c("Total payment"="red3", "Base payment"="blue3", 
@@ -1041,14 +1054,13 @@ server <- function(input, output, session){
       geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
                           values = c("Total payment"="red3", "Base payment"="blue3", 
                                      "Bonus payment"="green3")) +
       ylab("Price (kr)") + 
       xlab("Date") +
-      labs(title = "INCOME PER CLEAN TONNE") + 
+      labs(title = "INCOME PER CLEAN (17%) TONNE") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
@@ -1066,7 +1078,7 @@ server <- function(input, output, session){
                                      "Bonus payment"="green3")) +
       ylab("Price (kr)") + 
       xlab("Date") +
-      labs(title = "INCOME PER DELIVERED TONNE") + 
+      labs(title = "INCOME PER DELIVERED (17%) TONNE") + 
       theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
   })
   
@@ -1124,18 +1136,7 @@ server <- function(input, output, session){
       footer = NULL
     ))
   })
-  
-  observeEvent(input$help_harvest_yield, {
-    showModal(modalDialog(
-      title = "HARVEST YIELD",
-      "Root Yield (t/ha) - At Delivery should be taken from your delivery data.",
-      br(),br(),
-      "The tonnes Grown and tonnes Harvested are back calculated from the Storage Loss model (STORAGE tab), and the Harvest Loss model (above).",
-      easyClose = T,
-      footer = NULL
-    ))
-  })
-  
+
   observeEvent(input$help_storage_temp, {
     showModal(modalDialog(
       title = "STORAGE TEMPERATURE MODEL",
@@ -1178,7 +1179,26 @@ server <- function(input, output, session){
   observeEvent(input$help_delivery, {
     showModal(modalDialog(
       title = "DELIVERY",
-      "NOT CURRENTLY IN USE",
+      "Only the delivery date information is used elsewhere in this model",
+      br(),br(),
+      "The delivery costs table is accurate, but I'm not sure it's useful information.",
+      "If you have thoughts on this, please contact me at we@nbrf.nu",
+      easyClose = T,
+      footer = NULL
+    ))
+  })
+  
+  observeEvent(input$help_production, {
+    showModal(modalDialog(
+      title = "PRODUCTION",
+      "The date for which this data is stated to apply to is that which all other calculations are made around.",
+      "It is therefore important to get this right.",
+      br(),br(),
+      "If using data from delivery, the date should be the same as the delivery date.",
+      "If using data to forecast management options, the date is most likely from when the beets are in the field.",
+      "The 'Location: ...' text next to the date box tells you where the beets are when the production data applied to.",
+      "If forecasting, use the Production summary table to the right to see if the yield and pol at delivery are in line with expectations.",
+      br(),br(),
       easyClose = T,
       footer = NULL
     ))
