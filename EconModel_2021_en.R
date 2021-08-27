@@ -29,7 +29,7 @@
  # R packages
  # -------------------------------------------
  Rpackages_version = c("shiny_1.6.0", "plotly_4.9.3", "sets_1.0-18", 
-                       "ggplot2_3.3.3", "reshape2_1.4.4", "TTR_0.24.2")
+                       "ggplot2_3.3.3", "reshape2_1.4.4", "TTR_0.24.2","shinyWidgets_0.6.0")
  path_Rpackages = "C:/R packages_404"
  # -------------------------------------------
  
@@ -123,10 +123,44 @@ temp_tab_historical <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
 
 root_tip_break_perc <- seq(0,100,5)
 #harvest_loss_tn <- c(rep(0.5,5),rep(1,4),rep(2,4),rep(3,4),rep(4,4))
-harvest_loss_tn <- 1.902e-4*root_tip_break_perc^2 + 2.254e-2*root_tip_break_perc + 0.25
+harvest_loss_tn <- 2*(1.902e-4*root_tip_break_perc^2 + 2.254e-2*root_tip_break_perc) + 0.25
 harvest_loss_tab <- data.frame(root_tip_break_perc,harvest_loss_tn)
 
 lang_col <<- 3
+
+###############################################
+# Translation table
+###############################################
+
+language_tab <- matrix(c(
+  "AAA","SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN", "SKÖDE OCH LAGRING AV SOCKERBETOR - SVERIGE 2021",
+  
+  "BAA","INSTRUCTIONS","INSTRUKTIONER",
+  
+  "CAA","IN THE FIELD","I FÄLTET",
+  "CAB","Field size (ha)","Fält yta (ha)",
+  "CAC","VARIETY STRENGTH","SORT STRYKA",
+  "CAD","Variety type","Sort typ",
+  "CAE","Normal","Normal",
+  "CAF","High root yield","Hög rotskörd",
+  "CAG","High sugar content","Hög sockerhalt",
+  "CAH","Variety strength (relative)","Sort stryka (relativt)",
+  "CAI","LATE SEASON GROWTH POTENTIAL","SEN TILLVÄXT POTENTIAL",
+  "CAJ","Late season growth potential (relative to average (%))","Sen tillväxt potential (relativt till medel (%))",
+  
+  "DAA","HARVEST","SKÖRDA",
+  "EAA","STORAGE","LAGRING",
+  "FAA","DELIVERY","LEVERANS",
+  "GAA","PROD./ PAYMENT","PROD./ BETALNING",
+  "HAA","SUMMARY TABLE","SAMMANFATTNING - TAB",
+  "IAA","PRODUCTION - CHARTS","PRODUCTION - DIAGRAM",
+  "JAA","ECONOMY - CHARTS","EKONOMI - DIAGRAM",
+  "KAA","COMPARE","JÄMFÖRA"
+), byrow = T, ncol=3) 
+colnames(language_tab)<- c("REF","EN","SV")
+language_tab <- data.frame(language_tab)
+
+#language_tab[which(language_tab$REF == "AAA"),lang_col]
 
 ###############################################
 #
@@ -179,15 +213,20 @@ model <- fuzzy_system(variables, rules)
 ###############################################
 
 ui <- fluidPage(
-  #setBackgroundColor( #NEED SHINYWIDGETS PACKAGE
-  #    color = c("#F7FBFF", "#2171B5"),
-  #    gradient = "linear",
-  #    direction = "bottom"
-  #  ),
-  titlePanel(language_tab[which(language_tab$REF == "AAA"),lang_col]),
+  tags$head(
+    tags$style(HTML("
+      h4 {color: #4A4C64}
+      .tabbable > .nav > li > a   {color:#4A4C64; font-weight: bold; font-size: 15px}
+      .tabbable > .nav-tab {margin-top:50px;}
+      "))),
+  #.well {background-color:#E2DAD2}
+  setBackgroundColor(
+      color = c("#F4F2F0") #TAN - Lighter: #F4F2F0 Darker: #E2DAD2
+    ),
+  titlePanel(language_tab[which(language_tab$REF == "AAA"),lang_col]), style='color:#4A4C64',
   tabsetPanel(
     tabPanel(language_tab[which(language_tab$REF == "BAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(12, selectInput("lang_col","Language", choices = list("Svenska"=3,"English"=2)))
              ),
@@ -253,32 +292,35 @@ ui <- fluidPage(
       
     ),
     tabPanel(language_tab[which(language_tab$REF == "CAA"),lang_col], 
-      fluid = T,
+      fluid = T, style = "padding-top:5px",
              sidebarLayout(
                  sidebarPanel(
-                   sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
+                   sliderInput("field_size",language_tab[which(language_tab$REF == "CAB"),lang_col], min=0, max=200, step = 0.1, value = 10),
                    br(),
                    fluidRow(
-                     column(10, h4("VARIETY STRENGTH")),
+                     column(10, h4(language_tab[which(language_tab$REF == "CAC"),lang_col])),
                      column(2, actionButton("help_variety_strength", "?"))
                    ),
-                   selectInput("variety_type","Variety type", choices = list("Normal"=2, "High root yield"=1,"High sugar content"=3)),
-                   sliderInput("variety_hardness", "Variety strength (relative)", min=0, max=100, value = 50),
+                   selectInput("variety_type",language_tab[which(language_tab$REF == "CAD"),lang_col], 
+                               choices = list("Normal"=2, 
+                                              "Hög rotskörd"=1,
+                                              "Hög sockerhalt"=3)),
+                   sliderInput("variety_hardness", language_tab[which(language_tab$REF == "CAH"),lang_col], min=0, max=100, value = 50),
                    br(),
                    fluidRow(
-                     column(10, h4("LATE SEASON GROWTH POTENTIAL")),
+                     column(10, h4(language_tab[which(language_tab$REF == "CAI"),lang_col])),
                      column(2, actionButton("help_LSG", "?"))
                    ),
-                   sliderInput("late_potent","Late season growth potential (relative to average (%))", min=50, max=125, step=5, value=100),
+                   sliderInput("late_potent",language_tab[which(language_tab$REF == "CAJ"),lang_col], min=50, max=125, step=5, value=100),
                    ),
                  mainPanel(
-                   column(12,plotly::plotlyOutput("LSG_mass_daily_chart"),
+                   column(12,plotly::plotlyOutput("LSG_mass_daily_chart"), br(),
                    plotly::plotlyOutput("LSG_mass_cum_chart"))
                  )
                )
     ),
     tabPanel(language_tab[which(language_tab$REF == "DAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
             sidebarLayout(
               sidebarPanel(
                 dateInput("harvest_date","Harvest date",value = "2021-11-15"),
@@ -297,7 +339,7 @@ ui <- fluidPage(
             )
     ),
     tabPanel(language_tab[which(language_tab$REF == "EAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
@@ -334,7 +376,7 @@ ui <- fluidPage(
             )
     ),
     tabPanel(language_tab[which(language_tab$REF == "FAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                  sidebarPanel(
                    fluidRow(
@@ -352,7 +394,7 @@ ui <- fluidPage(
              
     ),
     tabPanel(language_tab[which(language_tab$REF == "GAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
@@ -391,7 +433,7 @@ ui <- fluidPage(
              )
     ),
     tabPanel(language_tab[which(language_tab$REF == "HAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(3, checkboxInput("data_restrict_start","Restrict data start date to harvest date?"),
                       checkboxInput("data_restrict_end","Restrict data end date to delivery date?"),
@@ -403,29 +445,31 @@ ui <- fluidPage(
              fluidRow(column(12,tableOutput("summary_tab_output")))
     ),
     tabPanel(language_tab[which(language_tab$REF == "IAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_sug")),
                column(6,plotly::plotlyOutput("summary_graph_pol"))
              ),
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_mass")),
-               column(6,plotly::plotlyOutput("summary_graph_temp"))
+               column(6,plotly::plotlyOutput("summary_graph_temp")),
+               style = 'margin-top:30px'
              )
     ),
     tabPanel(language_tab[which(language_tab$REF == "JAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_price_ha")),
                column(6,plotly::plotlyOutput("summary_graph_price_fi"))
              ),
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_price_cl")),
-               column(6,plotly::plotlyOutput("summary_graph_price_de"))
+               column(6,plotly::plotlyOutput("summary_graph_price_de")),
+               style = 'margin-top:30px'
              )
     ),
     tabPanel(language_tab[which(language_tab$REF == "KAA"),lang_col], 
-             fluid = T,
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(6, actionButton("comp_1", "Compare the current set-up")),
                column(6, actionButton("comp_2", "Compare the current set-up"))
@@ -531,10 +575,12 @@ server <- function(input, output, session){
     LSG_mass_loss_pc_daily <- LSG_mass_loss_pc_daily*LSG_pot
     
     LSG_mass_loss_pc_cum <- cumsum(LSG_mass_loss_pc_daily)
-    LSG_pol_loss_pp_cum <- cumsum(LSG_pol)
+    LSG_pol[which(date_full >= as.POSIXct("2021-11-01"))] <- 0.01
+    LSG_pol[which(date_full >= as.POSIXct("2021-11-15"))] <- 0
+    LSG_pol_loss_pp_cum <- cumsum(LSG_pol)    
     
     LSG_tab <- data.frame(date_full,LSG_mass_loss_pc_daily,LSG_mass_loss_pc_cum,LSG_pol_loss_pp_cum)
-    
+  
     LSG_tab
     
   })
@@ -932,29 +978,31 @@ server <- function(input, output, session){
   output$LSG_mass_daily_chart <- plotly::renderPlotly({
     summary_tab()
     ggplot(LSG_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = LSG_mass_loss_pc_daily), color = "darkred") +
+      geom_line(aes(y = LSG_mass_loss_pc_daily), color = "darkred", size = 1) +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       ylab("Daily growth (%)") + 
       xlab("Date") +
-      labs(title = "Late Season Growth Potential - daily")
+      labs(title = "Late Season Growth Potential - daily") +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   # Late season growth
   output$LSG_mass_cum_chart <- plotly::renderPlotly({
     summary_tab()
     ggplot(LSG_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = LSG_mass_loss_pc_cum), color = "darkred") + 
+      geom_line(aes(y = LSG_mass_loss_pc_cum), color = "darkred", size = 1) + 
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       ylab("Cumulative growth (%)") + 
       xlab("Date") +
-      labs(title = "Late Season Growth Potential - cumulative")
+      labs(title = "Late Season Growth Potential - cumulative") +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   # Plot of temperatures (Air and Clamp)
   output$temp_graph <- plotly::renderPlotly({
     summary_tab()
     ggplot(temp_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = temp_clamp, color = "Clamp temp")) + 
+      geom_line(aes(y = temp_clamp, color = "Clamp temp"), size = 1) + 
       geom_line(aes(y = temp_air, color="Air temperature"), linetype="dotdash") +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
@@ -963,15 +1011,16 @@ server <- function(input, output, session){
                           values = c("Clamp temp"="darkred","Air temperature"="steelblue")) +
       ylab("Temperature (°C)") + 
       xlab("Date") +
-      labs(title = "Clamp temperature model")
+      labs(title = "Clamp temperature model") +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   # Plot of sugar loss
   output$loss_Cd <- plotly::renderPlotly({
     
     ggplot(loss_tab(), aes(x=cum_temp)) + 
-      geom_line(aes(y = clamp_pol_loss_pc_cum, color = "Clamp pol loss")) + 
-      geom_line(aes(y = ref_medel, color="Ref pol loss"), linetype="dotdash") +
+      geom_line(aes(y = clamp_pol_loss_pc_cum, color = "Clamp pol loss"), size = 1) + 
+      geom_line(aes(y = ref_medel, color="Ref pol loss"), linetype="dotdash", size = 1) +
       scale_colour_manual("", 
                           breaks = c("Clamp pol loss","Ref pol loss"),
                           values = c("Clamp pol loss"="darkred","Ref pol loss"="steelblue")) +
@@ -979,136 +1028,145 @@ server <- function(input, output, session){
       ylim(0,15) +
       ylab("Sugar loss (% of original)") + 
       xlab("Accumulated temperature (°Cd)") +
-      labs(title = "Storage loss model")
+      labs(title = "Storage loss model") +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   
   output$summary_graph_temp <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=cum_temp, color = "Cum. temperature")) +
+      geom_line(aes(y=cum_temp, color = "Cum. temperature"), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Cum. temperature"),
-                          values = c("Cum. temperature"="red3")) +
+                          values = c("Cum. temperature"="#1C9C82")) +
       ylab("Cumulative temperature (°Cd)") + 
       xlab("Date") +
       labs(title = "CLAMP TEMPERATURE") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_pol <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = pol_cum, color = "Pol")) +
-      geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss")) + 
+      geom_line(aes(y = pol_cum, color = "Pol"), size = 1) +
+      geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss"), size = 1) + 
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
       scale_colour_manual("", 
                           breaks = c("Pol","Cum. % loss"),
-                          values = c("Pol"="red3","Cum. % loss"="blue3")) +
+                          values = c("Pol"="#1C9C82","Cum. % loss"="#4A4C64")) +
       ylab("Sugar (%)") + 
       xlab("Date") +
       labs(title = "SUGAR CONTENT") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
 
   output$summary_graph_mass <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=mass_kg_cum, color = "Cum. mass")) +
+      geom_line(aes(y=mass_kg_cum, color = "Cum. mass"), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Cum. mass"),
-                          values = c("Cum. mass"="red3")) +
+                          values = c("Cum. mass"="#1C9C82")) +
       ylab("Root yield (t/ha)") + 
       xlab("Date") +
       labs(title = "ROOT YIELD") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_sug <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=sug_cum, color = "Cum. sug")) +
+      geom_line(aes(y=sug_cum, color = "Cum. sug"), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Cum. sug"),
-                          values = c("Cum. sug"="red3")) +
+                          values = c("Cum. sug"="#1C9C82")) +
       ylab("Sugar yield (t/ha)") + 
       xlab("Date") +
       labs(title = "SUGAR YIELD") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_ha <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_ha, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_ha, colour = "Bonus payment")) +
-      geom_line(aes(y = price_ha, colour = "Total payment")) +
+      geom_line(aes(y = price_base_ha, colour = "Base payment"), size = 1) + 
+      geom_line(aes(y = price_bonus_ha, colour = "Bonus payment"), size = 1) +
+      geom_line(aes(y = price_ha, colour = "Total payment"), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
+                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
+                                     "Bonus payment"="#1C9C82")) +
       ylab("Price (kr/ha)") + 
       xlab("Date") +
       labs(title = "INCOME PER HECTARE") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_fi <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_field, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
-      geom_line(aes(y = price_field, colour = "Total payment")) +
+      geom_line(aes(y = price_base_field, colour = "Base payment"), size = 1) + 
+      geom_line(aes(y = price_bonus_field, colour = "Bonus payment"), size = 1) +
+      geom_line(aes(y = price_field, colour = "Total payment"), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
+                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
+                                     "Bonus payment"="#1C9C82")) +
       ylab("Price (kr)") + 
       xlab("Date") +
       labs(title = "INCOME PER FIELD") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_cl <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
-      geom_line(aes(y = price_clean, colour = "Total payment")) +
+      geom_line(aes(y = price_base_clean, colour = "Base payment"), size = 1) + 
+      geom_line(aes(y = price_bonus_clean, colour = "Bonus payment"), size = 1) +
+      geom_line(aes(y = price_clean, colour = "Total payment"), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
+                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
+                                     "Bonus payment"="#1C9C82")) +
       ylab("Price (kr/t)") + 
       xlab("Date") +
       labs(title = "INCOME PER CLEAN (17%) TONNE") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_de <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment")) +
-      geom_line(aes(y = price_delivered, colour = "Total payment")) +
+      geom_line(aes(y = price_base_delivered, colour = "Base payment"), size = 1) + 
+      geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment"), size = 1) +
+      geom_line(aes(y = price_delivered, colour = "Total payment"), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
                           breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
+                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
+                                     "Bonus payment"="#1C9C82")) +
       ylab("Price (kr/t)") + 
       xlab("Date") +
       labs(title = "INCOME PER DELIVERED (17%) TONNE") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   ###############################
@@ -1313,29 +1371,6 @@ server <- function(input, output, session){
   })
   
 }
-
-###############################################
-# Translation table
-###############################################
-
-language_tab <- matrix(c(
-  "AAA","SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN", "SKÖDE OCH LAGRING AV SOCKERBETOR - SVERIGE 2021",
-  "BAA","INSTRUCTIONS","INSTRUKTIONER",
-  "CAA","IN THE FIELD","I FÄLTET",
-  "DAA","HARVEST","SKÖDE",
-  "EAA","STORAGE","LAGRING",
-  "FAA","DELIVERY","LEVERANS",
-  "GAA","PROD./ PAYMENT","PROD./ BETALNING",
-  "HAA","SUMMARY TABLE","SAMMANFATTNING - TAB",
-  "IAA","PRODUCTION - CHARTS","PRODUCTION - DIAGRAM",
-  "JAA","ECONOMY - CHARTS","EKONOMI - DIAGRAM",
-  "KAA","COMPARE","JÄMFÖRA"
-), byrow = T, ncol=3) 
-colnames(language_tab)<- c("REF","EN","SV")
-language_tab <- data.frame(language_tab)
-#language_tab$lang_text <- language_tab$SV
-
-#language_tab[which(language_tab$REF == "AAA"),lang_col]
 
 ###############################################
 #

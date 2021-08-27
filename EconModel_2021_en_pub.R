@@ -12,6 +12,7 @@ library(sets)
 library(ggplot2)
 library(reshape2)
 library(TTR)
+library(shinyWidgets)
 
 
 ###############################################
