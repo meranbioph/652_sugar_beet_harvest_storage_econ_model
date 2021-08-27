@@ -126,6 +126,8 @@ root_tip_break_perc <- seq(0,100,5)
 harvest_loss_tn <- 1.902e-4*root_tip_break_perc^2 + 2.254e-2*root_tip_break_perc + 0.25
 harvest_loss_tab <- data.frame(root_tip_break_perc,harvest_loss_tn)
 
+lang_col <<- 3
+
 ###############################################
 #
 # Fuzzy loss model
@@ -182,9 +184,13 @@ ui <- fluidPage(
   #    gradient = "linear",
   #    direction = "bottom"
   #  ),
-  titlePanel("SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN"),
+  titlePanel(language_tab[which(language_tab$REF == "AAA"),lang_col]),
   tabsetPanel(
-    tabPanel("INSTRUCTIONS", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "BAA"),lang_col], 
+             fluid = T,
+             fluidRow(
+               column(12, selectInput("lang_col","Language", choices = list("Svenska"=3,"English"=2)))
+             ),
              fluidRow(
                column(12,h4("WARNINGS / DISCLAIMER"),
                       "You should not use this model to make management decisions on your farm.",
@@ -246,7 +252,8 @@ ui <- fluidPage(
              )
       
     ),
-    tabPanel("IN THE FIELD", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "CAA"),lang_col], 
+      fluid = T,
              sidebarLayout(
                  sidebarPanel(
                    sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
@@ -270,7 +277,8 @@ ui <- fluidPage(
                  )
                )
     ),
-    tabPanel("HARVEST", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "DAA"),lang_col], 
+             fluid = T,
             sidebarLayout(
               sidebarPanel(
                 dateInput("harvest_date","Harvest date",value = "2021-11-15"),
@@ -288,7 +296,8 @@ ui <- fluidPage(
               )
             )
     ),
-    tabPanel("STORAGE", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "EAA"),lang_col], 
+             fluid = T,
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
@@ -324,7 +333,8 @@ ui <- fluidPage(
                )
             )
     ),
-    tabPanel("DELIVERY", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "FAA"),lang_col], 
+             fluid = T,
              sidebarLayout(
                  sidebarPanel(
                    fluidRow(
@@ -341,7 +351,8 @@ ui <- fluidPage(
                )
              
     ),
-    tabPanel("PROD. / PAYMENT", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "GAA"),lang_col], 
+             fluid = T,
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
@@ -379,7 +390,8 @@ ui <- fluidPage(
                )
              )
     ),
-    tabPanel("SUMMARY TABLE", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "HAA"),lang_col], 
+             fluid = T,
              fluidRow(
                column(3, checkboxInput("data_restrict_start","Restrict data start date to harvest date?"),
                       checkboxInput("data_restrict_end","Restrict data end date to delivery date?"),
@@ -390,7 +402,8 @@ ui <- fluidPage(
             ),
              fluidRow(column(12,tableOutput("summary_tab_output")))
     ),
-    tabPanel("GRAPHS - PRODUCTION", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "IAA"),lang_col], 
+             fluid = T,
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_sug")),
                column(6,plotly::plotlyOutput("summary_graph_pol"))
@@ -400,7 +413,8 @@ ui <- fluidPage(
                column(6,plotly::plotlyOutput("summary_graph_temp"))
              )
     ),
-    tabPanel("GRAPHS - ECONOMY", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "JAA"),lang_col], 
+             fluid = T,
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_price_ha")),
                column(6,plotly::plotlyOutput("summary_graph_price_fi"))
@@ -410,7 +424,8 @@ ui <- fluidPage(
                column(6,plotly::plotlyOutput("summary_graph_price_de"))
              )
     ),
-    tabPanel("COMPARISON", fluid = T,
+    tabPanel(language_tab[which(language_tab$REF == "KAA"),lang_col], 
+             fluid = T,
              fluidRow(
                column(6, actionButton("comp_1", "Compare the current set-up")),
                column(6, actionButton("comp_2", "Compare the current set-up"))
@@ -424,6 +439,7 @@ ui <- fluidPage(
           )
     )
   )
+
 
 # shinyApp(ui=ui, server=server)
 
@@ -443,6 +459,10 @@ server <- function(input, output, session){
                             value = ifelse(input$variety_type == 1, 30, ifelse(input$variety_type == 2, 50, 70))))
   
   # Root harvest yield table (CAN THIS SIT IN THE FULL_TAB REACTIVE?)
+  
+  lang_col <- reactive({
+    lang_col <<- input$lang_col
+  })
   
   root_harvest_tab <- reactive({
     full_tab_p <- full_tab()
@@ -1293,6 +1313,29 @@ server <- function(input, output, session){
   })
   
 }
+
+###############################################
+# Translation table
+###############################################
+
+language_tab <- matrix(c(
+  "AAA","SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN", "SKÖDE OCH LAGRING AV SOCKERBETOR - SVERIGE 2021",
+  "BAA","INSTRUCTIONS","INSTRUKTIONER",
+  "CAA","IN THE FIELD","I FÄLTET",
+  "DAA","HARVEST","SKÖDE",
+  "EAA","STORAGE","LAGRING",
+  "FAA","DELIVERY","LEVERANS",
+  "GAA","PROD./ PAYMENT","PROD./ BETALNING",
+  "HAA","SUMMARY TABLE","SAMMANFATTNING - TAB",
+  "IAA","PRODUCTION - CHARTS","PRODUCTION - DIAGRAM",
+  "JAA","ECONOMY - CHARTS","EKONOMI - DIAGRAM",
+  "KAA","COMPARE","JÄMFÖRA"
+), byrow = T, ncol=3) 
+colnames(language_tab)<- c("REF","EN","SV")
+language_tab <- data.frame(language_tab)
+#language_tab$lang_text <- language_tab$SV
+
+#language_tab[which(language_tab$REF == "AAA"),lang_col]
 
 ###############################################
 #
