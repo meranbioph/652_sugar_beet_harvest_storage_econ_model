@@ -5,10 +5,10 @@ account: meran
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4525311
-bundleId: 4967184
+bundleId: 4970809
 url: https://meran.shinyapps.io/652_sugar_beet_harvest_storage_econ_model/
-when: 1629977679.0749
-lastSyncTime: 1629977679.0749
+when: 1630054392.32142
+lastSyncTime: 1630054392.32142
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: .RData|Debugging.R|EconModel_2020_en.R|EconModel_2021_en.R|EconModel_2021_en_backup.R|EconModel_neat.R|EconModel_pub.R|NBR_Harvest_Storage_Econ_Model.pdf|README.md

@@ -682,7 +682,8 @@ server <- function(input, output, session){
     
     ## Mass loss at harvest
     harvest_loss <- harvest_loss_tab$harvest_loss_tn[which(harvest_loss_tab$root_tip_break_perc == root_tip_break_pc_p)]
-    full_tab$harvest_mass_loss <- ifelse(full_tab$date_full < harvest_date, harvest_loss, 0)
+    if(day0 >= harvest_date) full_tab$harvest_mass_loss <- ifelse(full_tab$date_full < harvest_date, harvest_loss, 0)
+    if(day0 < harvest_date) full_tab$harvest_mass_loss <- ifelse(full_tab$date_full < harvest_date, 0, harvest_loss*(-1))
     
     ## Mass gain under late season growth
     full_tab$LSG_mass_loss_pc_cum <- ifelse(full_tab$date_full <= harvest_date, full_tab$LSG_mass_loss_pc_cum, full_tab$LSG_mass_loss_pc_cum[which(full_tab$date_full == harvest_date)])
