@@ -186,7 +186,7 @@ values <- reactiveValues()
     "EDB","Air temperature","Lufttemperatur",
     "EDC","Temperature (°C)","Temperatur (°C)",
     "EDD","Date","Datum",
-    "EDE","Clamp temperature model","Stuka temperaturemodell",
+    "EDE","Clamp temperature model","Stukatemperaturmodell",
     "EDF","Clamp pol loss","Stuka pol förlust",
     "EDG","Ref pol loss","Ref pol förlust",
     "EDH","Sugar loss (% of original)","Socker förlust (% originell)",
@@ -278,6 +278,18 @@ values <- reactiveValues()
     "IDQ","CLAMP TEMPERATURE","STUKATEMPERATUR",
     
     "JAA","ECONOMY - CHARTS","EKONOMI - DIAGRAM",
+    "JAB","Base payment","Baspris",
+    "JAC","Bonus payment","Bonuspris",
+    "JAD","Total payment","Totalpris",
+    "JAE","Date","Datum",
+    "JAG","Price (kr/ha)","Pris (kr/ha)",
+    "JAH","INCOME PER HECTARE","INKOMST PER HEKTAR",
+    "JAI","Price (kr)","Pris (kr)",
+    "JAJ","INCOME PER FIELD","INKOMST PER FÄLT",
+    "JAK","Price (kr/t)","Pris (kr/t)",
+    "JAL","INCOME PER CLEAN (17%) TON","INKOMST PER TON RENBETOR (17%)",
+    "JAM","Price (kr/t)","Pris (kr/t)",
+    "JAN","INCOME PER DELIVERED (17%) TON","INKOMST PER TON LEVERERADBETOR (17%)",
     
     "KAA","COMPARE","JÄMFÖRA"
   ), byrow = T, ncol=3) 
@@ -358,17 +370,16 @@ ui <- fluidPage(
     skin = c("Modern"),
     color = c("#4A4C64")
     ),
-  titlePanel(isolate(values$AAA)), 
+  titlePanel(title=div(isolate(values$AAA),img(src='NBR_RGB.png', height = "70px", align = "right"))), 
   style='color:#4A4C64',
   tabsetPanel(
     tabPanel(isolate(values$BAA), 
              fluid = T, style = "padding-top:5px",
              fluidRow(
-               column(10, selectInput("lang_col","Language", choices = list("Svenska"=3,"English"=2))),
-               column(2,img(src='NBR_RGB.png', height = "100px", align = "right"))
+               column(12, selectInput("lang_col","Language", choices = list("Svenska"=3,"English"=2)))
              ),
              fluidRow(
-               column(10,h4("WARNINGS / DISCLAIMER"),
+               column(12,h4("WARNINGS / DISCLAIMER"),
                       "You should not use this model to make management decisions on your farm.",
                       "It's purpose is to help explore the factors that drive successful harvest and storage strategies.",
                       "The model is general and may not be suitable to apply to your own production system.",
@@ -1152,7 +1163,7 @@ server <- function(input, output, session){
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
                           breaks = c(values$EDA,values$EDB),
-                          values = c("Stuktemperatur"="#1C9C82","Lufttemperatur"="#707180")) +
+                          values = c("Stukatemperatur"="#1C9C82","Lufttemperatur"="#707180")) +
       ylab(values$EDC) + 
       xlab(values$EDD) +
       labs(title = values$EDE) +
@@ -1241,73 +1252,73 @@ server <- function(input, output, session){
   
   output$summary_graph_price_ha <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_ha, colour = "Base payment"), size = 1) + 
-      geom_line(aes(y = price_bonus_ha, colour = "Bonus payment"), size = 1) +
-      geom_line(aes(y = price_ha, colour = "Total payment"), size = 1) +
+      geom_line(aes(y = price_base_ha, colour = values$JAB), size = 1) + 
+      geom_line(aes(y = price_bonus_ha, colour = values$JAC), size = 1) +
+      geom_line(aes(y = price_ha, colour = values$JAD), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
-                                     "Bonus payment"="#1C9C82")) +
-      ylab("Price (kr/ha)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER HECTARE") + 
+                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JAG) + 
+      ylab(values$JAF) +
+      xlab(values$JAE) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
   
   output$summary_graph_price_fi <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_field, colour = "Base payment"), size = 1) + 
-      geom_line(aes(y = price_bonus_field, colour = "Bonus payment"), size = 1) +
-      geom_line(aes(y = price_field, colour = "Total payment"), size = 1) +
+      geom_line(aes(y = price_base_field, colour = values$JAB), size = 1) + 
+      geom_line(aes(y = price_bonus_field, colour = values$JAC), size = 1) +
+      geom_line(aes(y = price_field, colour = values$JAD), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
-                                     "Bonus payment"="#1C9C82")) +
-      ylab("Price (kr)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER FIELD") + 
+                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JAEvalues$JAH) + 
+      ylab(values$JAI) + 
+      xlab(values$JAE) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
   
   output$summary_graph_price_cl <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_clean, colour = "Base payment"), size = 1) + 
-      geom_line(aes(y = price_bonus_clean, colour = "Bonus payment"), size = 1) +
-      geom_line(aes(y = price_clean, colour = "Total payment"), size = 1) +
+      geom_line(aes(y = price_base_clean, colour = values$JAB), size = 1) + 
+      geom_line(aes(y = price_bonus_clean, colour = values$JAC), size = 1) +
+      geom_line(aes(y = price_clean, colour = values$JAD), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
-                                     "Bonus payment"="#1C9C82")) +
-      ylab("Price (kr/t)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER CLEAN (17%) TONNE") + 
+                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JAJ) + 
+      ylab(values$JAK) + 
+      xlab(values$JAE) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
   
   output$summary_graph_price_de <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_delivered, colour = "Base payment"), size = 1) + 
-      geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment"), size = 1) +
-      geom_line(aes(y = price_delivered, colour = "Total payment"), size = 1) +
+      geom_line(aes(y = price_base_delivered, colour = values$JAB), size = 1) + 
+      geom_line(aes(y = price_bonus_delivered, colour = values$JAC), size = 1) +
+      geom_line(aes(y = price_delivered, colour = values$JAD), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="#4A4C64", 
-                                     "Bonus payment"="#1C9C82")) +
-      ylab("Price (kr/t)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER DELIVERED (17%) TONNE") + 
+                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JAL) + 
+      ylab(values$JAM) + 
+      xlab(values$JAE) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
