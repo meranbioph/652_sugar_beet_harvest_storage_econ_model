@@ -278,18 +278,18 @@ values <- reactiveValues()
     "IDQ","CLAMP TEMPERATURE","STUKATEMPERATUR",
     
     "JAA","ECONOMY - CHARTS","EKONOMI - DIAGRAM",
-    "JAB","Base payment","Baspris",
-    "JAC","Bonus payment","Bonuspris",
-    "JAD","Total payment","Totalpris",
-    "JAE","Date","Datum",
-    "JAG","Price (kr/ha)","Pris (kr/ha)",
-    "JAH","INCOME PER HECTARE","INKOMST PER HEKTAR",
-    "JAI","Price (kr)","Pris (kr)",
-    "JAJ","INCOME PER FIELD","INKOMST PER FÄLT",
-    "JAK","Price (kr/t)","Pris (kr/t)",
-    "JAL","INCOME PER CLEAN (17%) TON","INKOMST PER TON RENBETOR (17%)",
-    "JAM","Price (kr/t)","Pris (kr/t)",
-    "JAN","INCOME PER DELIVERED (17%) TON","INKOMST PER TON LEVERERADBETOR (17%)",
+    "JDA","Base payment","Baspris",
+    "JDB","Bonus payment","Bonuspris",
+    "JDC","Total payment","Totalpris",
+    "JDD","Date","Datum",
+    "JDE","Price (kr/ha)","Pris (kr/ha)",
+    "JDF","INCOME PER HECTARE","INKOMST PER HEKTAR",
+    "JDG","Price (kr)","Pris (kr)",
+    "JDH","INCOME PER FIELD","INKOMST PER FÄLT",
+    "JDI","Price (kr/t)","Pris (kr/t)",
+    "JDJ","INCOME PER CLEAN (17%) TON","INKOMST PER TON RENBETOR (17%)",
+    "JDK","Price (kr/t)","Pris (kr/t)",
+    "JDL","INCOME PER DELIVERED (17%) TON","INKOMST PER TON LEVERERADBETOR (17%)",
     
     "KAA","COMPARE","JÄMFÖRA"
   ), byrow = T, ncol=3) 
@@ -1252,73 +1252,73 @@ server <- function(input, output, session){
   
   output$summary_graph_price_ha <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_ha, colour = values$JAB), size = 1) + 
-      geom_line(aes(y = price_bonus_ha, colour = values$JAC), size = 1) +
-      geom_line(aes(y = price_ha, colour = values$JAD), size = 1) +
+      geom_line(aes(y = price_base_ha, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_ha, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_ha, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          breaks = c(values$JDA, values$JDB, values$JDC),
                           values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
                                      "Bonuspris"="#1C9C82")) +
-      labs(title = values$JAG) + 
-      ylab(values$JAF) +
-      xlab(values$JAE) +
+      labs(title = values$JDF) + 
+      ylab(values$JDE) +
+      xlab(values$JDD) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
   
   output$summary_graph_price_fi <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_field, colour = values$JAB), size = 1) + 
-      geom_line(aes(y = price_bonus_field, colour = values$JAC), size = 1) +
-      geom_line(aes(y = price_field, colour = values$JAD), size = 1) +
+      geom_line(aes(y = price_base_field, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_field, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_field, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          breaks = c(values$JDA, values$JDB, values$JDC),
                           values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
                                      "Bonuspris"="#1C9C82")) +
-      labs(title = values$JAEvalues$JAH) + 
-      ylab(values$JAI) + 
-      xlab(values$JAE) +
+      labs(title = values$JDH) + 
+      ylab(values$JDG) + 
+      xlab(values$JDD) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
   
   output$summary_graph_price_cl <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_clean, colour = values$JAB), size = 1) + 
-      geom_line(aes(y = price_bonus_clean, colour = values$JAC), size = 1) +
-      geom_line(aes(y = price_clean, colour = values$JAD), size = 1) +
+      geom_line(aes(y = price_base_clean, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_clean, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_clean, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          breaks = c(values$JDA, values$JDB, values$JDC),
                           values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
                                      "Bonuspris"="#1C9C82")) +
-      labs(title = values$JAJ) + 
-      ylab(values$JAK) + 
-      xlab(values$JAE) +
+      labs(title = values$JDJ) + 
+      ylab(values$JDI) + 
+      xlab(values$JDD) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
   
   output$summary_graph_price_de <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_delivered, colour = values$JAB), size = 1) + 
-      geom_line(aes(y = price_bonus_delivered, colour = values$JAC), size = 1) +
-      geom_line(aes(y = price_delivered, colour = values$JAD), size = 1) +
+      geom_line(aes(y = price_base_delivered, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_delivered, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_delivered, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
-                          breaks = c(values$JAB, values$JAC, values$JAD),
+                          breaks = c(values$JDA, values$JDB, values$JDC),
                           values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
                                      "Bonuspris"="#1C9C82")) +
-      labs(title = values$JAL) + 
-      ylab(values$JAM) + 
-      xlab(values$JAE) +
+      labs(title = values$JDL) + 
+      ylab(values$JDK) + 
+      xlab(values$JDD) +
       theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
             legend.position="bottom")
   })
