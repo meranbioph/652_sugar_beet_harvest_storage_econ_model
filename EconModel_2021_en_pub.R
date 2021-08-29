@@ -14,7 +14,6 @@ library(reshape2)
 library(TTR)
 library(shinyWidgets)
 
-
 ###############################################
 # ---------------------------------------------
 # THE MODEL
@@ -75,8 +74,186 @@ temp_tab_historical <- data.frame(yr2016,yr2017,yr2018,yr2019,yr2020)
 
 root_tip_break_perc <- seq(0,100,5)
 #harvest_loss_tn <- c(rep(0.5,5),rep(1,4),rep(2,4),rep(3,4),rep(4,4))
-harvest_loss_tn <- 1.902e-4*root_tip_break_perc^2 + 2.254e-2*root_tip_break_perc + 0.25
+harvest_loss_tn <- 2*(1.902e-4*root_tip_break_perc^2 + 2.254e-2*root_tip_break_perc) + 0.25
 harvest_loss_tab <- data.frame(root_tip_break_perc,harvest_loss_tn)
+
+lang_col <<- 3
+
+###############################################
+# Translation table
+###############################################
+
+values <- reactiveValues()
+
+{
+  language_tab <- matrix(c(
+    "AAA","SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN", "SKÖDE OCH LAGRING AV SOCKERBETOR - SVERIGE 2021",
+    "ATA","Field","Fält",
+    "ATB","Harvest","Upptagning",
+    "ATC","Clamp","Stuka",
+    "ATD","Delivery","Leverans",
+    "ATE","Factory","Örtofta",
+    
+    "BAA","INSTRUCTIONS","INSTRUKTIONER",
+    
+    "CAA","IN THE FIELD","I FÄLTET",
+    "CAB","Field size (ha)","Fält yta (ha)",
+    "CAC","VARIETY STRENGTH","SORT STRYKA",
+    "CAD","Variety type","Sort typ",
+    "CAE","Normal","Normal",
+    "CAF","High root yield","Hög rotskörd",
+    "CAG","High sugar content","Hög sockerhalt",
+    "CAH","Variety strength (relative)","Sort stryka (relativt)",
+    "CAI","LATE SEASON GROWTH POTENTIAL","SEN TILLVÄXT POTENTIAL",
+    "CAJ","Late season growth potential (relative to average (%))","Sen tillväxt potential (relativt till medel (%))",
+    "CDA","Late Season Growth Potential - daily","Sen tillväxt potential - dagligen",
+    "CDB","Daily growth (%)","Dagligen tillväxt (%)",
+    "CDC","Date","Datum",
+    "CDD","Late Season Growth Potential - cumulative","Sen tillväxt potential - kumulativ",
+    "CDE","Cumulative growth (%)","Kumulativ tillväxt (%)",
+    "CDF","Date","Datum",
+    
+    "DAA","HARVEST","UPPTAGNING",
+    "DAB","Harvest date","Upptagningsadatum",
+    "DAC","HARVEST CONDITIONS","FÖRHÅLLANDE VID UPPTAGNING",
+    "DAD","Soil moisture at harvest (percent of ideal (%)","Mark fuktighet vid upptagning (procent idella (%)",
+    "DAE","Cleaning intensity (relative)","Rensning intensitet (relativ)",
+    "DAF","Roots with tip breakage > 2cm (%)","Rotspetsbrot > 2cm (% betor)",
+    "DAG","Harvest loss","Spill vid upptagning",
+    "DTA","Tonnes per hectare","Ton per hektar",
+    "DTB","Percent","procent",
+    
+    "EAA","STORAGE","LAGRING",
+    "EAB","Date of cover with TopTex","Datum TopTex sattes på",
+    "EAC","CLAMP TEMPERATURE MODEL","STUKATEMPERATURMODELL",
+    "EAD","Clamp temperature model","Stukatemperaturmodell",
+    "EAE","Temperature date from which year?","Temperaturdata från vilket år?",
+    "EAF","Clamp width at base (m)","Stuk bredd vid botten (m)",
+    "EAG","Clamp temperature floor (°C)","Stuktemperatur golv (°C)",
+    "EAH","STORAGE LOSS MODEL","LAGRINGSFÖRSULT MODELL",
+    "EAI","Sugar loss model","Sockerförlust modell",
+    "EAJ","Mass loss per degree day (%/t/°C)","Vikt förlust per daggrader (%/t/°C)",
+    "EDA","Clamp temp","Stukatemperatur",
+    "EDB","Air temperature","Lufttemperatur",
+    "EDC","Temperature (°C)","Temperatur (°C)",
+    "EDD","Date","Datum",
+    "EDE","Clamp temperature model","Stukatemperaturmodell",
+    "EDF","Clamp pol loss","Stuka pol förlust",
+    "EDG","Ref pol loss","Ref pol förlust",
+    "EDH","Sugar loss (% of original)","Socker förlust (% originell)",
+    "EDI","Accumulated temperature (°Cd)","Daggradder (°Cd)",
+    "EDJ","Storage loss model","Socker förlust modell",
+    
+    "FAA","DELIVERY","LEVERANS",
+    "FAB","DELIVERY","LEVERANS",
+    "FAC","Delivery date","Leveransdatum",
+    "FAD","Distance to deliver (mil)","Distans av leverans (mil)",
+    "FAE","Cost for delivery","Leverans kostnad",
+    "FAF","Delivery costs","Leveranskostnader",
+    "FTA","Field","Fält",
+    "FTB","Mil","Mil",
+    "FTC","Tonne","Ton",
+    "FTD","Tonnes per...","Ton per ...",
+    "FTE","Cost per ... (SEK)","Kostnad per... (SEK)",
+    "FTF","Cost per clean tonne (SEK)","Kostnad per ton renbetor (SEK)",
+    "FTG","Cost of soil transport (SEK)","Kostnad jordtransport (SEK)",
+    
+    "GAA","PROD./ PAYMENT","PROD./ BETALNING",
+    "GAB","PRODUCTION","PRODUKTION",
+    "GAC","Date production data from:","Datum produktion data från:",
+    "GAD","Root yield (t/ha)","Rotskörd (t/ha)",
+    "GAE","Sugar content (%)","Sockerhalt (%)",
+    "GAF","Renhet (%)","Renhet (%)",
+    "GAG","Production summary","Produktion summanfattning",
+    "GAH","PAYMENT","BETALNING",
+    "GAI","Your contract price (SEK)","Din kontrakt pris (SEK)",
+    "GAJ","Eligible for volume bonus","Volymbonus",
+    "GAK","Payment","Betalning",
+    "GTA","Sugar yield (t/ha)","Sockerskörd (t/ha)",
+    "GTB","Pol (%)","Pol (%)",
+    "GTC","Root Yield (t/ha)","Rotskörd (t/ha)",
+    "GTD","Root Yield (t/field)","Rotskörd (t/fält)",
+    "GTE","Grown","Växt",
+    "GTF","Harvested","Upptagen", 
+    "GTG","Delivery","Leverad",
+    "GTH","Hectare","Hektar",
+    "GTI","Field","Fält",
+    "GTJ","Tonne - delivered","Ton - leverad",
+    "GTK","Tonne - clean","Ton - renbetor",
+    "GTL","Base price","Baspris",
+    "GTM","Bonuses","Bonus",
+    "GTN","Total payment","Total betalning",
+    
+    "HAA","SUMMARY TABLE","SAMMANFATTNING - TAB",
+    "HAB","Restrict data start date to harvest date","Begränsa data startdatum till upptagningsdatum",
+    "HAC","Restrict data end date to delivery date","Begränsa data slutdatum till leveransdatum",
+    "HAD","Show economy","Visa ekonomi",
+    "HTA","Date", "Datum",
+    "HTB","Location", "Läge",
+    "HTC","Temp. (°C)", "Temp. (°C)",
+    "HTD","Cum. Temp (°Cd)", "Cum. Temp (°Cd)",
+    "HTE","Cum. pol loss (%)", "Cum pol förlust (%)",
+    "HTF","Pol","Pol",
+    "HTG","Root Yield","Rotskörd",
+    "HTH","Sugar Yield","Sockerskörd",
+    "HTI","Base price - clean tn","Baspris per ton ren betor",
+    "HTJ","Bonus - clean tn","Bonus per ton ren betor",
+    "HTK","Payment - clean tn","Totallbetalning per ton ren betor",
+    "HTL","Base price - delivered tn","Baspris per ton levererad",
+    "HTM","Bonus - delivered tn","Bonus per ton levererad",
+    "HTN","Payment - delivered tn","Totallbetalning per ton levererad",
+    "HTO","Base price - ha","Baspris per ha",
+    "HTP","Bonus - ha","Bonus per ha",
+    "HTQ","Payment - ha","Totallbetalning per ha",
+    "HTR","Base price - field","Baspris per fält",
+    "HTS","Bonus - field","Bonus per fält",
+    "HTT","Payment - field","Totallbetalning per fält",
+    
+    "IAA","PRODUCTION - CHARTS","PRODUCTION - DIAGRAM",
+    "IDA","Cum. sug","Cum. sug",
+    "IDB","Sugar yield (t/ha)","Sockerskörd (t/ha)",
+    "IDC","Date","Datum",
+    "IDD","SUGAR YIELD","SOCKERSKÖRD",
+    "IDE","Pol","Pol",
+    "IDF","Cum. % loss","Cum. % förlust",
+    "IDG","Pol (%)","Pol (%)",
+    "IDH","Date","Datum",
+    "IDI","SUGAR CONTENT","SOCKERHALT",
+    "IDJ","Cum. mass","Cum. massa",
+    "IDK","Root yield (t/ha)","Rotskörd (t/ha)",
+    "IDL","Date","Datum",
+    "IDM","ROOT YIELD","ROTSKÖRD",
+    "IDN","Cum. temperature","Cum. temperatur",
+    "IDO","Degree days (°Cd)","Daggrader(°Cd)",
+    "IDP","Date","Datum",
+    "IDQ","CLAMP TEMPERATURE","STUKATEMPERATUR",
+    
+    "JAA","ECONOMY - CHARTS","EKONOMI - DIAGRAM",
+    "JDA","Base payment","Baspris",
+    "JDB","Bonus payment","Bonuspris",
+    "JDC","Total payment","Totalpris",
+    "JDD","Date","Datum",
+    "JDE","Price (kr/ha)","Pris (kr/ha)",
+    "JDF","INCOME PER HECTARE","INKOMST PER HEKTAR",
+    "JDG","Price (kr)","Pris (kr)",
+    "JDH","INCOME PER FIELD","INKOMST PER FÄLT",
+    "JDI","Price (kr/t)","Pris (kr/t)",
+    "JDJ","INCOME PER CLEAN (17%) TON","INKOMST PER TON RENBETOR (17%)",
+    "JDK","Price (kr/t)","Pris (kr/t)",
+    "JDL","INCOME PER DELIVERED (17%) TON","INKOMST PER TON LEVERERADBETOR (17%)",
+    
+    "KAA","COMPARE","JÄMFÖRA"
+  ), byrow = T, ncol=3) 
+  colnames(language_tab)<- c("REF","EN","SV")
+  language_tab <- data.frame(language_tab)
+  
+  #language_tab[which(language_tab$REF == "AAA"),lang_col]
+  
+  for(i in 1:(nrow(language_tab))){
+    lang_row <- language_tab[i,1]
+    eval(parse(text=paste0("values$",lang_row," <- language_tab[which(language_tab$REF == '",lang_row,"'),lang_col]")))
+  }
+}
 
 ###############################################
 #
@@ -129,14 +306,29 @@ model <- fuzzy_system(variables, rules)
 ###############################################
 
 ui <- fluidPage(
-  #  setBackgroundColor(
-  #    color = c("#F7FBFF", "#2171B5"),
-  #    gradient = "linear",
-  #    direction = "bottom"
-  #  ),
-  titlePanel("SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN"),
+  tags$head(
+    tags$style(HTML("
+    {color:#4A4C64}
+      h4 {color: #4A4C64}
+      .tabbable > .nav > li > a   {color:#4A4C64; font-weight: bold; font-size: 15px}
+      .tabbable > .nav-tab {margin-top:50px;}
+      "))),
+  #.well {background-color:#E2DAD2}
+  setBackgroundColor(
+    color = c("#F4F2F0") #TAN - Lighter: #F4F2F0 Darker: #E2DAD2
+  ),
+  chooseSliderSkin(
+    skin = c("Modern"),
+    color = c("#4A4C64")
+  ),
+  titlePanel(title=div(isolate(values$AAA),img(src='NBR_RGB.png', height = "70px", align = "right"))), 
+  style='color:#4A4C64',
   tabsetPanel(
-    tabPanel("INSTRUCTIONS", fluid = T,
+    tabPanel(isolate(values$BAA), 
+             fluid = T, style = "padding-top:5px",
+             fluidRow(
+               column(12, selectInput("lang_col","Language", choices = list("Svenska"=3,"English"=2)))
+             ),
              fluidRow(
                column(12,h4("WARNINGS / DISCLAIMER"),
                       "You should not use this model to make management decisions on your farm.",
@@ -198,62 +390,71 @@ ui <- fluidPage(
              )
              
     ),
-    tabPanel("IN THE FIELD", fluid = T,
+    # IN THE FIELD
+    tabPanel(isolate(values$CAA), 
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                sidebarPanel(
-                 sliderInput("field_size","Field size (ha)", min=0, max=200, step = 0.1, value = 10),
+                 sliderInput("field_size",isolate(values$CAB), min=0, max=200, step = 0.1, value = 10),
                  br(),
                  fluidRow(
-                   column(10, h4("VARIETY STRENGTH")),
+                   column(10, h4(isolate(values$CAC))),
                    column(2, actionButton("help_variety_strength", "?"))
                  ),
-                 selectInput("variety_type","Variety type", choices = list("Normal"=2, "High root yield"=1,"High sugar content"=3)),
-                 sliderInput("variety_hardness", "Variety strength (relative)", min=0, max=100, value = 50),
+                 selectInput("variety_type",isolate(values$CAD), 
+                             choices = list("Normal"=2, 
+                                            "Hög rotskörd"=1,
+                                            "Hög sockerhalt"=3)),
+                 sliderInput("variety_hardness", isolate(values$CAH), min=0, max=100, value = 50),
                  br(),
                  fluidRow(
-                   column(10, h4("LATE SEASON GROWTH POTENTIAL")),
+                   column(10, h4(isolate(values$CAI))),
                    column(2, actionButton("help_LSG", "?"))
                  ),
-                 sliderInput("late_potent","Late season growth potential (relative to average (%))", min=50, max=125, step=5, value=100),
+                 sliderInput("late_potent",isolate(values$CAJ), min=50, max=125, step=5, value=100),
                ),
                mainPanel(
-                 column(12,plotly::plotlyOutput("LSG_mass_daily_chart"),
+                 column(12,plotly::plotlyOutput("LSG_mass_daily_chart"), br(),
                         plotly::plotlyOutput("LSG_mass_cum_chart"))
                )
              )
     ),
-    tabPanel("HARVEST", fluid = T,
+    # HARVEST
+    tabPanel(isolate(values$DAA), 
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                sidebarPanel(
-                 dateInput("harvest_date","Harvest date",value = "2021-11-15"),
+                 dateInput("harvest_date",isolate(values$DAB),value = "2021-11-15"),
                  br(),
                  fluidRow(
-                   column(10, h4("HARVEST CONDITIONS")),
+                   column(10, h4(isolate(values$DAC))),
                    column(2, actionButton("help_harvest_conditions", "?"))
                  ),
-                 sliderInput("late_moisture", "Soil moisture at harvest (percent of ideal (%))", min=0, max=200, value=100),
-                 sliderInput("harvester_cleaning", "Cleaning intensity (relative)", min=0, max=100, value=40),
-                 sliderInput("root_tip_break_pc","Roots with tip breakage > 2cm (%)", min=0, max=100, step=5, value=25)
+                 sliderInput("late_moisture", isolate(values$DAD), min=0, max=200, value=100),
+                 sliderInput("harvester_cleaning", isolate(values$DAE), min=0, max=100, value=40),
+                 sliderInput("root_tip_break_pc",isolate(values$DAF), min=0, max=100, step=5, value=25)
                ),
                mainPanel(
-                 column(12, h4("Harvest loss"),tableOutput("summary_harvest_loss"), style = "margin-top: 340px")
+                 column(12, h4(isolate(values$DAG),tableOutput("summary_harvest_loss"), style = "margin-top: 340px"))
                )
              )
     ),
-    tabPanel("STORAGE", fluid = T,
+    # STORAGE
+    tabPanel(isolate(values$EAA), 
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
-                   dateInput("cover_date", "Date of cover with TopTex", value="2021-12-01"),
+                   dateInput("cover_date", isolate(values$EAB), value="2021-12-01"),
                    br(),
                    fluidRow(
-                     column(10, h4("CLAMP TEMPERATURE MODEL")),
+                     column(10, h4(isolate(values$EAC))),
                      column(2, actionButton("help_storage_temp", "?"))
                    ),
-                   selectInput("temp_clamp_model","Clamp temperature model", choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3, "Ventilated" = 4)),
-                   selectInput("temp_air_yr","Temperature data from which year?", choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
-                   sliderInput("clamp_size", "Clamp width at base (m)", step = 0.1, min=7, max=9, value=8),
-                   sliderInput("ref_temp", "Clamp temperature floor (°C)", min=0, max=10, value=2)
+                   selectInput("temp_clamp_model",isolate(values$EAD), choices = list("Moving average with floor"=1, "Air with floor"=2, "Air"=3, "Ventilated" = 4)),
+                   selectInput("temp_air_yr",isolate(values$EAE), choices = list("2020"="yr2020", "2019"="yr2019", "2018"="yr2018", "2017"="yr2017", "2016"="yr2016")),
+                   sliderInput("clamp_size", isolate(values$EAF), step = 0.1, min=7, max=9, value=8),
+                   sliderInput("ref_temp", isolate(values$EAG), min=0, max=10, value=2)
                  ),
                  mainPanel(
                    column(12, plotly::plotlyOutput("temp_graph"), style = "margin-top: 125px")
@@ -263,11 +464,11 @@ ui <- fluidPage(
                fluidRow(
                  sidebarPanel(
                    fluidRow(
-                     column(10, h4("STORAGE LOSS MODEL")),
+                     column(10, h4(isolate(values$EAH))),
                      column(2, actionButton("help_storage_loss", "?"))
                    ),
-                   selectInput("loss_model","Loss model", choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3)),
-                   sliderInput("mass_loss","Mass loss per degree day (%/t/°C)", min=0, max=0.05, value=0.01)
+                   selectInput("loss_model",isolate(values$EAI), choices = list("Discontinuous"=1, "Linear"=2, "Quadratic"=3)),
+                   sliderInput("mass_loss",isolate(values$EAJ), min=0, max=0.05, value=0.01)
                  ),
                  mainPanel(
                    column(12, plotly::plotlyOutput("loss_Cd"))
@@ -276,93 +477,105 @@ ui <- fluidPage(
                )
              )
     ),
-    tabPanel("DELIVERY", fluid = T,
+    # DELIVERY
+    tabPanel(isolate(values$FAA), 
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                sidebarPanel(
                  fluidRow(
-                   column(10, h4("DELIVERY")),
+                   column(10, h4(isolate(values$FAB))),
                    column(2,actionButton("help_delivery", "?"))
                  ),
-                 dateInput("delivery_date","Delivery date",value = "2022-01-15"),
-                 sliderInput("delivery_distance","Distance to deliver (mil)",min=1,max=20,step=0.1,value=5),
-                 sliderInput("delivery_cost","Cost for delivery",min=1000,max=200000,value=5000)
+                 dateInput("delivery_date",isolate(values$FAC),value = "2022-01-15"),
+                 sliderInput("delivery_distance",isolate(values$FAD),min=1,max=20,step=0.1,value=5),
+                 sliderInput("delivery_cost",isolate(values$FAE),min=1000,max=200000,value=5000)
                ),
                mainPanel(
-                 column(12, h4("Delivery costs"), tableOutput("delivery_cost_tab"), style = "margin-top: 125px")
+                 column(12, h4(isolate(values$FAF)), tableOutput("delivery_cost_tab"), style = "margin-top: 125px")
                )
              )
              
     ),
-    tabPanel("PROD. / PAYMENT", fluid = T,
+    # PRODUCTION AND PAYMENT
+    tabPanel(isolate(values$GAA), 
+             fluid = T, style = "padding-top:5px",
              sidebarLayout(
                fluidRow(
                  sidebarPanel(
                    fluidRow(
-                     column(10, h4("PRODUCTION")),
+                     column(10, h4(isolate(values$GAB))),
                      column(2, actionButton("help_production", "?"))
                    ),
                    fluidRow(
-                     column(6,dateInput("prod_data_date","Date payment schedule data from:",value = "2022-01-15")),
+                     column(6,dateInput("prod_data_date",isolate(values$GAC),value = "2022-01-15")),
                      column(6,textOutput("prod_data_loc"),style = "margin-top: 30px")
                    ),
-                   sliderInput("root_yield","Root yield (t/ha)", min=40, max=120, step = 1, value = 86),
-                   sliderInput("pol", "Sugar content (% pol)", min=15, max=22, value=17, step = 0.1),
-                   sliderInput("renhet", "Renhet (%)", min=78, max=100, value=89.5, step = 0.1)
+                   sliderInput("root_yield",isolate(values$GAD), min=40, max=120, step = 1, value = 86),
+                   sliderInput("pol", isolate(values$GAE), min=15, max=22, value=17, step = 0.1),
+                   sliderInput("renhet", isolate(values$GAF), min=78, max=100, value=89.5, step = 0.1)
                  ),
                  mainPanel(
-                   column(12, h4("Production summary"), tableOutput("root_harvest_tab"))
+                   column(12, h4(isolate(values$GAG)), tableOutput("root_harvest_tab"))
                  ),
                  style = 'padding-left:15px'
                ),
                fluidRow(
                  sidebarPanel(
                    fluidRow(
-                     column(10,h4("PAYMENT")),
+                     column(10,h4(isolate(values$GAH))),
                      column(2,actionButton("help_payment", "?"))
                    ),
-                   numericInput("price", "Your contract price (SEK)", value=313),
-                   checkboxInput("vol","Eligible for volume bonus?", value = F),
+                   numericInput("price", isolate(values$GAI), value=313),
+                   checkboxInput("vol",isolate(values$GAJ), value = F),
                    br(),
                  ),
                  mainPanel(
-                   column(12, h4("Payment"), tableOutput("summary_final_tab"))
+                   column(12, h4(isolate(values$GAK)), tableOutput("summary_final_tab"))
                  ),
                  style = 'padding-left:15px'
                )
              )
     ),
-    tabPanel("SUMMARY TABLE", fluid = T,
+    # SUMMARY
+    tabPanel(isolate(values$HAA), 
+             fluid = T, style = "padding-top:5px",
              fluidRow(
-               column(3, checkboxInput("data_restrict_start","Restrict data start date to harvest date?"),
-                      checkboxInput("data_restrict_end","Restrict data end date to delivery date?"),
+               column(3, checkboxInput("data_restrict_start",isolate(values$HAB)),
+                      checkboxInput("data_restrict_end",isolate(values$HAC)),
                       style = 'padding-left:15px'
                ),
-               column(3,checkboxGroupInput("summary_tab_show","Show economy:",choices=c("Per ha"="HA", "Per field"="FI", "Per tonne clean" = "CL"," Per tonne delivered"="DE"),selected = )),
+               column(3,checkboxGroupInput("summary_tab_show",isolate(values$HAD),choices=c("Per ha"="HA", "Per fält"="FI", "Per ton ren betor" = "CL"," Per ton levererad"="DE"),selected = )),
                column(6,)
              ),
              fluidRow(column(12,tableOutput("summary_tab_output")))
     ),
-    tabPanel("GRAPHS - PRODUCTION", fluid = T,
+    # PRODUCTION TABLES
+    tabPanel(isolate(values$IAA), 
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_sug")),
                column(6,plotly::plotlyOutput("summary_graph_pol"))
              ),
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_mass")),
-               column(6,plotly::plotlyOutput("summary_graph_temp"))
+               column(6,plotly::plotlyOutput("summary_graph_temp")),
+               style = 'margin-top:30px'
              )
     ),
-    tabPanel("GRAPHS - ECONOMY", fluid = T,
+    tabPanel(isolate(values$JAA), 
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_price_ha")),
                column(6,plotly::plotlyOutput("summary_graph_price_fi"))
              ),
              fluidRow(
                column(6,plotly::plotlyOutput("summary_graph_price_cl")),
-               column(6,plotly::plotlyOutput("summary_graph_price_de"))
+               column(6,plotly::plotlyOutput("summary_graph_price_de")),
+               style = 'margin-top:30px'
              )
     ),
-    tabPanel("COMPARISON", fluid = T,
+    tabPanel(isolate(values$KAA), 
+             fluid = T, style = "padding-top:5px",
              fluidRow(
                column(6, actionButton("comp_1", "Compare the current set-up")),
                column(6, actionButton("comp_2", "Compare the current set-up"))
@@ -376,6 +589,7 @@ ui <- fluidPage(
     )
   )
 )
+
 
 # shinyApp(ui=ui, server=server)
 
@@ -395,6 +609,10 @@ server <- function(input, output, session){
                             value = ifelse(input$variety_type == 1, 30, ifelse(input$variety_type == 2, 50, 70))))
   
   # Root harvest yield table (CAN THIS SIT IN THE FULL_TAB REACTIVE?)
+  
+  lang_col <- reactive({
+    lang_col <<- input$lang_col
+  })
   
   root_harvest_tab <- reactive({
     full_tab_p <- full_tab()
@@ -424,8 +642,8 @@ server <- function(input, output, session){
                                  root_mass_grown, root_mass_harvest, root_mass_factory,
                                  root_mass_grown_field, root_mass_harvest_field, root_mass_factory_field
     ), byrow=F, nrow=3) 
-    colnames(root_harvest_tab) <- c("Sugar yield (t/ha)","Pol (%)", "Root Yield (t/ha)","Root Yield (t/field)")
-    rownames(root_harvest_tab) <- c("Grown","Harvested", "Delivery")
+    colnames(root_harvest_tab) <- c(values$GTA, values$GTB, values$GTC, values$GTD)
+    rownames(root_harvest_tab) <- c(values$GTE, values$GTF, values$GTG)
     
     root_harvest_tab
   })
@@ -435,15 +653,15 @@ server <- function(input, output, session){
     
     harvest_date <- as.POSIXct(input$harvest_date, tz = "UTC", format = "%Y-%m-%d")
     delivery_date <- as.POSIXct(input$delivery_date, tz = "UTC", format = "%Y-%m-%d")
-    location <- "Clamp"
+    location <- values$ATC
     
     # Full table of location of beets
     loc_tab <- data.frame(date_full, location)
     
-    loc_tab$location[which(loc_tab$date_full <= harvest_date)] <- "Field"
-    loc_tab$location[which(loc_tab$date_full == harvest_date)] <- "Harvest"
-    loc_tab$location[which(loc_tab$date_full >= delivery_date)] <- "Factory"
-    loc_tab$location[which(loc_tab$date_full == delivery_date)] <- "Delivery"
+    loc_tab$location[which(loc_tab$date_full <= harvest_date)] <- values$ATA
+    loc_tab$location[which(loc_tab$date_full == harvest_date)] <- values$ATB
+    loc_tab$location[which(loc_tab$date_full >= delivery_date)] <- values$ATE
+    loc_tab$location[which(loc_tab$date_full == delivery_date)] <- values$ATD
     
     loc_tab
   })
@@ -463,7 +681,9 @@ server <- function(input, output, session){
     LSG_mass_loss_pc_daily <- LSG_mass_loss_pc_daily*LSG_pot
     
     LSG_mass_loss_pc_cum <- cumsum(LSG_mass_loss_pc_daily)
-    LSG_pol_loss_pp_cum <- cumsum(LSG_pol)
+    LSG_pol[which(date_full >= as.POSIXct("2021-11-01"))] <- 0.01
+    LSG_pol[which(date_full >= as.POSIXct("2021-11-15"))] <- 0
+    LSG_pol_loss_pp_cum <- cumsum(LSG_pol)    
     
     LSG_tab <- data.frame(date_full,LSG_mass_loss_pc_daily,LSG_mass_loss_pc_cum,LSG_pol_loss_pp_cum)
     
@@ -580,7 +800,7 @@ server <- function(input, output, session){
     harvest_loss_pc_summary <- harvest_loss_tn_summary/root_harvest_p*100
     
     summary_harvest_loss <- matrix(c(harvest_loss_tn_summary,harvest_loss_pc_summary ), nrow = 1)
-    colnames(summary_harvest_loss) <- c("Tonne per hectare", "Percent")
+    colnames(summary_harvest_loss) <- c(values$DTA, values$DTB)
     
     summary_harvest_loss
   })
@@ -604,8 +824,8 @@ server <- function(input, output, session){
     delivery_cost_tab <- matrix(c(root_harvest_p, input$delivery_cost, delivery_cost_field_clean, delivery_cost_field_soil,
                                   delivery_tn_mil, delivery_cost_mil, delivery_cost_mil_clean, delivery_cost_mil_soil,
                                   1, delivery_cost_tn, delivery_cost_tn_clean, delivery_cost_tn_soil), byrow=T, nrow=3) 
-    rownames(delivery_cost_tab) <- c("Field", "Mil", "Tonne")
-    colnames(delivery_cost_tab) <- c("Tonnes per...","Cost per... (SEK)","Cost per clean tonne (SEK)", "Cost of soil transport (SEK)")
+    rownames(delivery_cost_tab) <- c(values$FTA, values$FTB, values$FTC)
+    colnames(delivery_cost_tab) <- c(values$FTD,values$FTE,values$FTF, values$FTG)
     delivery_cost_tab
   }, rownames = T, digits=1
   )
@@ -781,11 +1001,11 @@ server <- function(input, output, session){
     # input from required inputs
     summary_tab_cols <- input$summary_tab_show
     
-    summary_tab_names <- c("Date", "Location", "Temp. (°C)", "Cum. Temp (°Cd)", "Cum. pol loss (%)", "Pol","Root Yield","Sugar Yield")
-    if("CL" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - clean tn","Bonus - clean tn","Payment - clean tn")
-    if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - delivered tn","Bonus - delivered tn","Payment - delivered tn")
-    if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - ha","Bonus - ha","Payment - ha")
-    if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, "Base price - field","Bonus - field","Payment - field")
+    summary_tab_names <- c(values$HTA, values$HTB, values$HTC, values$HTD, values$HTE, values$HTF, values$HTG, values$HTH)
+    if("CL" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, values$HTI, values$HTJ, values$HTK)
+    if("DE" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, values$HTL, values$HTM, values$HTN)
+    if("HA" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, values$HTO, values$HTP, values$HTQ)
+    if("FI" %in% summary_tab_cols) summary_tab_names <- c(summary_tab_names, values$HTR, values$HTS, values$HTT)
     
     #Formatting
     summary_tab_output$date_full <- format(summary_tab_output$date_full,'%Y-%m-%d')
@@ -806,8 +1026,8 @@ server <- function(input, output, session){
                                                     "price_base_delivered","price_bonus_delivered","price_delivered",
                                                     "price_base_clean","price_bonus_clean","price_clean")],
                                 byrow=T,nrow=4)
-    rownames(summary_final_tab) <- c("Hectare", "Field","Tonne - delivered", "Tonne - clean")
-    colnames(summary_final_tab) <- c("Base price","Bonuses","Total payment")
+    rownames(summary_final_tab) <- c(values$GTH, values$GTI,values$GTJ, values$GTK)
+    colnames(summary_final_tab) <- c(values$GTL, values$GTM, values$GTN)
     
     summary_final_tab
     
@@ -864,183 +1084,194 @@ server <- function(input, output, session){
   output$LSG_mass_daily_chart <- plotly::renderPlotly({
     summary_tab()
     ggplot(LSG_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = LSG_mass_loss_pc_daily), color = "darkred") +
+      geom_line(aes(y = LSG_mass_loss_pc_daily), color = "#1C9C82", size = 1) +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      ylab("Daily growth (%)") + 
-      xlab("Date") +
-      labs(title = "Late Season Growth Potential - daily")
+      labs(title = values$CDA) +
+      ylab(values$CDB) + 
+      xlab(values$CDC) +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   # Late season growth
   output$LSG_mass_cum_chart <- plotly::renderPlotly({
     summary_tab()
     ggplot(LSG_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = LSG_mass_loss_pc_cum), color = "darkred") + 
+      geom_line(aes(y = LSG_mass_loss_pc_cum), color = "#1C9C82", size = 1) + 
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      ylab("Cumulative growth (%)") + 
-      xlab("Date") +
-      labs(title = "Late Season Growth Potential - cumulative")
+      ylab(values$CDE) + 
+      xlab(values$CDF) +
+      labs(title = values$CDD) +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   # Plot of temperatures (Air and Clamp)
   output$temp_graph <- plotly::renderPlotly({
     summary_tab()
     ggplot(temp_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = temp_clamp, color = "Clamp temp")) + 
-      geom_line(aes(y = temp_air, color="Air temperature"), linetype="dotdash") +
+      geom_line(aes(y = temp_clamp, color = values$EDA), size = 1) + 
+      geom_line(aes(y = temp_air, color=values$EDB), linetype="dotdash") +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Clamp temp","Air temperature"),
-                          values = c("Clamp temp"="darkred","Air temperature"="steelblue")) +
-      ylab("Temperature (°C)") + 
-      xlab("Date") +
-      labs(title = "Clamp temperature model")
+                          breaks = c(values$EDA,values$EDB),
+                          values = c("Stukatemperatur"="#1C9C82","Lufttemperatur"="#707180")) +
+      ylab(values$EDC) + 
+      xlab(values$EDD) +
+      labs(title = values$EDE) +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   # Plot of sugar loss
   output$loss_Cd <- plotly::renderPlotly({
     
     ggplot(loss_tab(), aes(x=cum_temp)) + 
-      geom_line(aes(y = clamp_pol_loss_pc_cum, color = "Clamp pol loss")) + 
-      geom_line(aes(y = ref_medel, color="Ref pol loss"), linetype="dotdash") +
+      geom_line(aes(y = clamp_pol_loss_pc_cum, color = values$EDF), size = 1) + 
+      geom_line(aes(y = ref_medel, color=values$EDG), linetype="dotdash", size = 1) +
       scale_colour_manual("", 
-                          breaks = c("Clamp pol loss","Ref pol loss"),
-                          values = c("Clamp pol loss"="darkred","Ref pol loss"="steelblue")) +
+                          breaks = c(values$EDF,values$EDG),
+                          values = c("Stuka pol förlust"="#1C9C82","Ref pol förlust"="#707180")) +
       xlim(0,500) +
       ylim(0,15) +
-      ylab("Sugar loss (% of original)") + 
-      xlab("Accumulated temperature (°Cd)") +
-      labs(title = "Storage loss model")
-  })
-  
-  
-  output$summary_graph_temp <- plotly::renderPlotly({
-    ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=cum_temp, color = "Cum. temperature")) +
-      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
-      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
-      scale_colour_manual("", 
-                          breaks = c("Cum. temperature"),
-                          values = c("Cum. temperature"="red3")) +
-      ylab("Cumulative temperature (°Cd)") + 
-      xlab("Date") +
-      labs(title = "CLAMP TEMPERATURE") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  })
-  
-  output$summary_graph_pol <- plotly::renderPlotly({
-    ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = pol_cum, color = "Pol")) +
-      geom_line(aes(y = pol_loss_pc_cum, color = "Cum. % loss")) + 
-      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
-      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
-      scale_colour_manual("", 
-                          breaks = c("Pol","Cum. % loss"),
-                          values = c("Pol"="red3","Cum. % loss"="blue3")) +
-      ylab("Sugar (%)") + 
-      xlab("Date") +
-      labs(title = "SUGAR CONTENT") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
-  })
-  
-  output$summary_graph_mass <- plotly::renderPlotly({
-    ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=mass_kg_cum, color = "Cum. mass")) +
-      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
-      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
-      scale_colour_manual("", 
-                          breaks = c("Cum. mass"),
-                          values = c("Cum. mass"="red3")) +
-      ylab("Root yield (t/ha)") + 
-      xlab("Date") +
-      labs(title = "ROOT YIELD") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      ylab(values$EDH) + 
+      xlab(values$EDI) +
+      labs(title = values$EDJ) +
+      theme(plot.title = element_text(colour = "#4A4C64"))
   })
   
   output$summary_graph_sug <- plotly::renderPlotly({
     ggplot(summary_tab(), aes(x=date_full)) + 
-      geom_line(aes(y=sug_cum, color = "Cum. sug")) +
+      geom_line(aes(y=sug_cum, color = values$IDA), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Cum. sug"),
-                          values = c("Cum. sug"="red3")) +
-      ylab("Sugar yield (t/ha)") + 
-      xlab("Date") +
-      labs(title = "SUGAR YIELD") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+                          breaks = c(values$IDA),
+                          values = c("Cum. sug"="#1C9C82")) +
+      ylab(values$IDB) + 
+      xlab(values$IDC) +
+      labs(title = values$IDD) +
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
+  })
+  
+  output$summary_graph_pol <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y = pol_cum, color = values$IDE), size = 1) +
+      geom_line(aes(y = pol_loss_pc_cum, color = values$IDF), size = 1) + 
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      scale_y_continuous(sec.axis = sec_axis(~(. + move) / amplify, name = "Pol sugar")) +
+      scale_colour_manual("", 
+                          breaks = c(values$IDE,values$IDF),
+                          values = c("Pol"="#1C9C82","Cum. % förlust"="#4A4C64")) +
+      ylab(values$IDG) + 
+      xlab(values$IDH) +
+      labs(title = values$IDI) + 
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
+  })
+  
+  output$summary_graph_mass <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y=mass_kg_cum, color = values$IDJ), size = 1) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c(values$IDJ),
+                          values = c("Cum. massa"="#1C9C82")) +
+      ylab(values$IDK) + 
+      xlab(values$IDL) +
+      labs(title = values$IDM) +
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
+  })
+  
+  output$summary_graph_temp <- plotly::renderPlotly({
+    ggplot(summary_tab(), aes(x=date_full)) + 
+      geom_line(aes(y=cum_temp, color = values$IDN), size = 1) +
+      geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
+      geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
+      geom_hline(yintercept = cum_loss_delivery, linetype="dotted") +
+      scale_colour_manual("", 
+                          breaks = c(values$IDN),
+                          values = c("Cum. temperatur"="#1C9C82")) +
+      ylab(values$IDO) + 
+      xlab(values$IDP) +
+      labs(title = values$IDQ) +
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_ha <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_ha, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_ha, colour = "Bonus payment")) +
-      geom_line(aes(y = price_ha, colour = "Total payment")) +
+      geom_line(aes(y = price_base_ha, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_ha, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_ha, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
-      ylab("Price (kr/ha)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER HECTARE") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+                          breaks = c(values$JDA, values$JDB, values$JDC),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JDF) + 
+      ylab(values$JDE) +
+      xlab(values$JDD) +
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_fi <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_field, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_field, colour = "Bonus payment")) +
-      geom_line(aes(y = price_field, colour = "Total payment")) +
+      geom_line(aes(y = price_base_field, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_field, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_field, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
-      ylab("Price (kr)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER FIELD") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+                          breaks = c(values$JDA, values$JDB, values$JDC),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JDH) + 
+      ylab(values$JDG) + 
+      xlab(values$JDD) +
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_cl <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_clean, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_clean, colour = "Bonus payment")) +
-      geom_line(aes(y = price_clean, colour = "Total payment")) +
+      geom_line(aes(y = price_base_clean, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_clean, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_clean, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
-      ylab("Price (kr/t)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER CLEAN (17%) TONNE") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+                          breaks = c(values$JDA, values$JDB, values$JDC),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JDJ) + 
+      ylab(values$JDI) + 
+      xlab(values$JDD) +
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   output$summary_graph_price_de <- plotly::renderPlotly({
     ggplot(full_tab(), aes(x=date_full)) + 
-      geom_line(aes(y = price_base_delivered, colour = "Base payment")) + 
-      geom_line(aes(y = price_bonus_delivered, colour = "Bonus payment")) +
-      geom_line(aes(y = price_delivered, colour = "Total payment")) +
+      geom_line(aes(y = price_base_delivered, colour = values$JDA), size = 1) + 
+      geom_line(aes(y = price_bonus_delivered, colour = values$JDB), size = 1) +
+      geom_line(aes(y = price_delivered, colour = values$JDC), size = 1) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       #scale_y_continuous(sec.axis = sec_axis(~. * sec_y_max / loss_max, name = "Pol sugar")) +
       scale_colour_manual("", 
-                          breaks = c("Total payment", "Base payment", "Bonus payment"),
-                          values = c("Total payment"="red3", "Base payment"="blue3", 
-                                     "Bonus payment"="green3")) +
-      ylab("Price (kr/t)") + 
-      xlab("Date") +
-      labs(title = "INCOME PER DELIVERED (17%) TONNE") + 
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+                          breaks = c(values$JDA, values$JDB, values$JDC),
+                          values = c("Totalpris"="red3", "Baspris"="#4A4C64", 
+                                     "Bonuspris"="#1C9C82")) +
+      labs(title = values$JDL) + 
+      ylab(values$JDK) + 
+      xlab(values$JDD) +
+      theme(plot.title = element_text(size=15, face="bold.italic", colour = "#4A4C64"), 
+            legend.position="bottom")
   })
   
   ###############################
