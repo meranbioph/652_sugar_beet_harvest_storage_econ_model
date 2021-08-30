@@ -14,6 +14,7 @@ library(reshape2)
 library(TTR)
 library(shinyWidgets)
 
+
 ###############################################
 # ---------------------------------------------
 # THE MODEL
@@ -87,162 +88,290 @@ values <- reactiveValues()
 
 {
   language_tab <- matrix(c(
-    "AAA","SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN", "SKÖDE OCH LAGRING AV SOCKERBETOR - SVERIGE 2021",
-    "ATA","Field","Fält",
-    "ATB","Harvest","Upptagning",
-    "ATC","Clamp","Stuka",
-    "ATD","Delivery","Leverans",
-    "ATE","Factory","Örtofta",
+    "AAA", "SUGAR BEET HARVEST AND STORAGE - 2021 SWEDEN", "SKÖDE OCH LAGRING AV SOCKERBETOR - SVERIGE 2021",
+    "ATA", "Field", "Fält",
+    "ATB", "Harvest", "Upptagning",
+    "ATC", "Clamp", "Stuka",
+    "ATD", "Delivery", "Leverans",
+    "ATE", "Factory", "Örtofta",
     
-    "BAA","INSTRUCTIONS","INSTRUKTIONER",
     
-    "CAA","IN THE FIELD","I FÄLTET",
-    "CAB","Field size (ha)","Fält yta (ha)",
-    "CAC","VARIETY STRENGTH","SORT STRYKA",
-    "CAD","Variety type","Sort typ",
-    "CAE","Normal","Normal",
-    "CAF","High root yield","Hög rotskörd",
-    "CAG","High sugar content","Hög sockerhalt",
-    "CAH","Variety strength (relative)","Sort stryka (relativt)",
-    "CAI","LATE SEASON GROWTH POTENTIAL","SEN TILLVÄXT POTENTIAL",
-    "CAJ","Late season growth potential (relative to average (%))","Sen tillväxt potential (relativt till medel (%))",
-    "CDA","Late Season Growth Potential - daily","Sen tillväxt potential - dagligen",
-    "CDB","Daily growth (%)","Dagligen tillväxt (%)",
-    "CDC","Date","Datum",
-    "CDD","Late Season Growth Potential - cumulative","Sen tillväxt potential - kumulativ",
-    "CDE","Cumulative growth (%)","Kumulativ tillväxt (%)",
-    "CDF","Date","Datum",
+    "BAA", "INSTRUCTIONS", "INSTRUKTIONER",
+    "BAB", "WARNINGS / DISCLAIMER", "VARNINGAR",
+    "BAC", "You should not use this model to make management decisions on your farm.", "Du bör inte använda den här modellen för att fatta ledningsbeslut på din gård.",
+    "BAD", "It's purpose is to help explore the factors that drive successful harvest and storage strategies.", "Syftet är att hjälpa till att utforska de faktorer som driver framgångsrika skörde- och lagringsstrategier.",
+    "BAE", "The model is general and may not be suitable to apply to your own production system.", "Modellen är generell och kanske inte lämplig för ditt eget produktionssystem.",
+    "BAF", "This model is not able to reflect that variability in the production system that occur from day to day in reality.", "Denna modell kan inte återspegla den variation i produktionssystemet som uppstår från dag till dag i verkligheten.",
+    "BAG", "It similarly is not able to reflect your willingness to accept these production risks.", "På samma sätt kan den inte återspegla din vilja att acceptera dessa produktionsrisker.",
+    "BAH", "The 2021 price model for Sweden is applied. Prices are assumed fixed in SEK.", "Prismodellen 2021 för Sverige tillämpas. Priserna antas fasta i SEK.",
+    "BAI", "INSTRUCTIONS", "INSTRUKTIONER",
+    "BAJ", "Basically, just work through the tabs.", "Det är bara att går igenom flikarna",
+    "BAK", "The default values set are those that approximately reflect the industry averages.", "Standardvärdena är de som ungefär återspeglar branschens genomsnitt.",
+    "BAL", "If you are unsure what is an appropriate value, either take the default, or set the value to an extreme value and see what happens.", "Om du är osäker på vad som är ett lämpligt värde, antingen ta standard, eller ställ in värdet till ett extremt värde och se vad som händer.",
+    "BAM", "While a model can give an indication for what might happen, one of the best uses for them is think about all the things that the model doesn't capture.", "Även om en modell kan ge en indikation på vad som kan hända, är en av de bästa användningsområdena för dem att tänka på alla saker som modellen inte fångar.",
+    "BAN", "Similarly, when you can see the modelled outcome is different to the actual outcome, this is the time to ask 'why?' and hopefully find some real insight.", "På samma sätt, när du kan se att det modellerade resultatet skiljer sig från det faktiska resultatet, är det här dags att fråga 'varför?' och förhoppningsvis hitta någon verklig insikt.",
+    "BAO", "Please note that the cost information in the Delivery tab is not well developed.", "Observera att kostnadsinformationen på fliken Leverans inte är väl utvecklad.",
+    "BAP", "DEFINITIONS", "DEFINITIONER",
+    "BAQ", "Clean (mass): The beet mass that is deemed processible.", "Ren betor (produktion): Betmassa som är ",
+    "BAR", "The term on which root yield is commonly defined.", "Termen på vilken rotskörd vanligen definieras",
+    "BAS", "The mass is independent of sugar concentration.", "Massan är oberoende av sockerhalten",
+    "BAT", "Equals the weight of delivered beet x (1 - dirt-tare).", "Lika med vikt levererad betor x renhet",
+    "BAU", "Clean (prices): The price per tonne of clean beet mass, are adjusted to be for a pol of 17%.", "Ren betor (pris) eller 'Ren betor (17%)': Priset per ton ren betor justeras till en pol på 17%",
+    "BAV", "The term on which prices are set.", "Termen som priserna fastställs på.",
+    "BAW", "The price is adjusted 9% per percentage point change in pol from the base of 17%.", "Priset justeras 9% per procentenhetsförändring i pol från basen på 17%.",
+    "BAX", "The conversion to 17% is linear in the change in price per change in pol percentage point.", "Omräkningen till 17% är linjär i förändringen av pris per förändring i pol procenten.",
+    "BAY", "This means that the increase/ decrease in price is greater at lower sugar concentrations.", "Det innebär att prisökningen/ sänkningen är större vid lägre sockerkoncentrationer.",
+    "BAZ", "The contract price is for a pol of 17%.", "Kontraktspriset är för en pol på 17%",
+    "BBA", "If your pol is higher than this, then the prices per tonne clean given in this model will be higher than your contract price.", "Om din pol är högre än så är priserna per ton ren betor som anges i denna modell högre än ditt kontraktspris.",
+    "BBB", "Delivered: The mass that falls out of the back of the truck at Örtofta.", "Levererad: Massan som faller ut ur lastbilen på Örtofta.",
+    "BBC", "A large fraction of the mass is soil and unprocessable beet material (dirt tare).", "En stor bråkdel av massan är jord och obearbetat betmaterial",
+    "BBD", "Is independent of sugar concentration.", "Är oberoende av sockerhalt.",
     
-    "DAA","HARVEST","UPPTAGNING",
-    "DAB","Harvest date","Upptagningsadatum",
-    "DAC","HARVEST CONDITIONS","FÖRHÅLLANDE VID UPPTAGNING",
-    "DAD","Soil moisture at harvest (percent of ideal (%)","Mark fuktighet vid upptagning (procent idella (%)",
-    "DAE","Cleaning intensity (relative)","Rensning intensitet (relativ)",
-    "DAF","Roots with tip breakage > 2cm (%)","Rotspetsbrot > 2cm (% betor)",
-    "DAG","Harvest loss","Spill vid upptagning",
-    "DTA","Tonnes per hectare","Ton per hektar",
-    "DTB","Percent","procent",
     
-    "EAA","STORAGE","LAGRING",
-    "EAB","Date of cover with TopTex","Datum TopTex sattes på",
-    "EAC","CLAMP TEMPERATURE MODEL","STUKATEMPERATURMODELL",
-    "EAD","Clamp temperature model","Stukatemperaturmodell",
-    "EAE","Temperature date from which year?","Temperaturdata från vilket år?",
-    "EAF","Clamp width at base (m)","Stuk bredd vid botten (m)",
-    "EAG","Clamp temperature floor (°C)","Stuktemperatur golv (°C)",
-    "EAH","STORAGE LOSS MODEL","LAGRINGSFÖRSULT MODELL",
-    "EAI","Sugar loss model","Sockerförlust modell",
-    "EAJ","Mass loss per degree day (%/t/°C)","Vikt förlust per daggrader (%/t/°C)",
-    "EDA","Clamp temp","Stukatemperatur",
-    "EDB","Air temperature","Lufttemperatur",
-    "EDC","Temperature (°C)","Temperatur (°C)",
-    "EDD","Date","Datum",
-    "EDE","Clamp temperature model","Stukatemperaturmodell",
-    "EDF","Clamp pol loss","Stuka pol förlust",
-    "EDG","Ref pol loss","Ref pol förlust",
-    "EDH","Sugar loss (% of original)","Socker förlust (% originell)",
-    "EDI","Accumulated temperature (°Cd)","Daggradder (°Cd)",
-    "EDJ","Storage loss model","Socker förlust modell",
+    "CAA", "IN THE FIELD", "I FÄLTET",
+    "CAB", "Field size (ha)", "Fält yta (ha)",
+    "CAC", "VARIETY STRENGTH", "SORT STRYKA",
+    "CAD", "Variety type", "Sort typ",
+    "CAE", "Normal", "Normal",
+    "CAF", "High root yield", "Hög rotskörd",
+    "CAG", "High sugar content", "Hög sockerhalt",
+    "CAH", "Variety strength (relative)", "Sort stryka (relativt)",
+    "CAI", "LATE SEASON GROWTH POTENTIAL", "SEN TILLVÄXT POTENTIAL",
+    "CAJ", "Late season growth potential (relative to average (%))", "Sen tillväxt potential (relativt till medel (%))",
+    "CDA", "Late Season Growth Potential - daily", "Sen tillväxt potential - dagligen",
+    "CDB", "Daily growth (%)", "Dagligen tillväxt (%)",
+    "CDC", "Date", "Datum",
+    "CDD", "Late Season Growth Potential - cumulative", "Sen tillväxt potential - kumulativ",
+    "CDE", "Cumulative growth (%)", "Kumulativ tillväxt (%)",
+    "CDF", "Date", "Datum",
     
-    "FAA","DELIVERY","LEVERANS",
-    "FAB","DELIVERY","LEVERANS",
-    "FAC","Delivery date","Leveransdatum",
-    "FAD","Distance to deliver (mil)","Distans av leverans (mil)",
-    "FAE","Cost for delivery","Leverans kostnad",
-    "FAF","Delivery costs","Leveranskostnader",
-    "FTA","Field","Fält",
-    "FTB","Mil","Mil",
-    "FTC","Tonne","Ton",
-    "FTD","Tonnes per...","Ton per ...",
-    "FTE","Cost per ... (SEK)","Kostnad per... (SEK)",
-    "FTF","Cost per clean tonne (SEK)","Kostnad per ton renbetor (SEK)",
-    "FTG","Cost of soil transport (SEK)","Kostnad jordtransport (SEK)",
     
-    "GAA","PROD./ PAYMENT","PROD./ BETALNING",
-    "GAB","PRODUCTION","PRODUKTION",
-    "GAC","Date production data from:","Datum produktion data från:",
-    "GAD","Root yield (t/ha)","Rotskörd (t/ha)",
-    "GAE","Sugar content (%)","Sockerhalt (%)",
-    "GAF","Renhet (%)","Renhet (%)",
-    "GAG","Production summary","Produktion summanfattning",
-    "GAH","PAYMENT","BETALNING",
-    "GAI","Your contract price (SEK)","Din kontrakt pris (SEK)",
-    "GAJ","Eligible for volume bonus","Volymbonus",
-    "GAK","Payment","Betalning",
-    "GTA","Sugar yield (t/ha)","Sockerskörd (t/ha)",
-    "GTB","Pol (%)","Pol (%)",
-    "GTC","Root Yield (t/ha)","Rotskörd (t/ha)",
-    "GTD","Root Yield (t/field)","Rotskörd (t/fält)",
-    "GTE","Grown","Växt",
-    "GTF","Harvested","Upptagen", 
-    "GTG","Delivery","Leverad",
-    "GTH","Hectare","Hektar",
-    "GTI","Field","Fält",
-    "GTJ","Tonne - delivered","Ton - leverad",
-    "GTK","Tonne - clean","Ton - renbetor",
-    "GTL","Base price","Baspris",
-    "GTM","Bonuses","Bonus",
-    "GTN","Total payment","Total betalning",
+    "DAA", "HARVEST", "UPPTAGNING",
+    "DAB", "Harvest date", "Upptagningsdatum",
+    "DAC", "HARVEST CONDITIONS", "FÖRHÅLLANDE VID UPPTAGNING",
+    "DAD", "Soil moisture at harvest (percent of ideal (%)", "Mark fuktighet vid upptagning (procent ideella (%)",
+    "DAE", "Cleaning intensity (relative)", "Rensning intensitet (relativ)",
+    "DAF", "Roots with tip breakage > 2cm (%)", "Rotspetsbrot > 2cm (% betor)",
+    "DAG", "Harvest loss", "Spill vid upptagning",
+    "DTA", "Tonnes per hectare", "Ton per hektar",
+    "DTB", "Percent", "procent",
     
-    "HAA","SUMMARY TABLE","SAMMANFATTNING - TAB",
-    "HAB","Restrict data start date to harvest date","Begränsa data startdatum till upptagningsdatum",
-    "HAC","Restrict data end date to delivery date","Begränsa data slutdatum till leveransdatum",
-    "HAD","Show economy","Visa ekonomi",
-    "HTA","Date", "Datum",
-    "HTB","Location", "Läge",
-    "HTC","Temp. (°C)", "Temp. (°C)",
-    "HTD","Cum. Temp (°Cd)", "Cum. Temp (°Cd)",
-    "HTE","Cum. pol loss (%)", "Cum pol förlust (%)",
-    "HTF","Pol","Pol",
-    "HTG","Root Yield","Rotskörd",
-    "HTH","Sugar Yield","Sockerskörd",
-    "HTI","Base price - clean tn","Baspris per ton ren betor",
-    "HTJ","Bonus - clean tn","Bonus per ton ren betor",
-    "HTK","Payment - clean tn","Totallbetalning per ton ren betor",
-    "HTL","Base price - delivered tn","Baspris per ton levererad",
-    "HTM","Bonus - delivered tn","Bonus per ton levererad",
-    "HTN","Payment - delivered tn","Totallbetalning per ton levererad",
-    "HTO","Base price - ha","Baspris per ha",
-    "HTP","Bonus - ha","Bonus per ha",
-    "HTQ","Payment - ha","Totallbetalning per ha",
-    "HTR","Base price - field","Baspris per fält",
-    "HTS","Bonus - field","Bonus per fält",
-    "HTT","Payment - field","Totallbetalning per fält",
     
-    "IAA","PRODUCTION - CHARTS","PRODUCTION - DIAGRAM",
-    "IDA","Cum. sug","Cum. sug",
-    "IDB","Sugar yield (t/ha)","Sockerskörd (t/ha)",
-    "IDC","Date","Datum",
-    "IDD","SUGAR YIELD","SOCKERSKÖRD",
-    "IDE","Pol","Pol",
-    "IDF","Cum. % loss","Cum. % förlust",
-    "IDG","Pol (%)","Pol (%)",
-    "IDH","Date","Datum",
-    "IDI","SUGAR CONTENT","SOCKERHALT",
-    "IDJ","Cum. mass","Cum. massa",
-    "IDK","Root yield (t/ha)","Rotskörd (t/ha)",
-    "IDL","Date","Datum",
-    "IDM","ROOT YIELD","ROTSKÖRD",
-    "IDN","Cum. temperature","Cum. temperatur",
-    "IDO","Degree days (°Cd)","Daggrader(°Cd)",
-    "IDP","Date","Datum",
-    "IDQ","CLAMP TEMPERATURE","STUKATEMPERATUR",
+    "EAA", "STORAGE", "LAGRING",
+    "EAB", "Date of cover with TopTex", "Datum TopTex sattes på",
+    "EAC", "CLAMP TEMPERATURE MODEL", "STUKATEMPERATURMODELL",
+    "EAD", "Clamp temperature model", "Stukatemperaturmodell",
+    "EAE", "Temperature date from which year?", "Temperaturdata från vilket år?",
+    "EAF", "Clamp width at base (m)", "Stuk bredd vid botten (m)",
+    "EAG", "Clamp temperature floor (°C)", "Stuktemperatur golv (°C)",
+    "EAH", "STORAGE LOSS MODEL", "LAGRINGSFÖRSULT MODELL",
+    "EAI", "Sugar loss model", "Sockerförlust modell",
+    "EAJ", "Mass loss per degree day (%/t/°C)", "Vikt förlust per daggrader (%/t/°C)",
+    "EDA", "Clamp temp", "Stukatemperatur",
+    "EDB", "Air temperature", "Lufttemperatur",
+    "EDC", "Temperature (°C)", "Temperatur (°C)",
+    "EDD", "Date", "Datum",
+    "EDE", "Clamp temperature model", "Stukatemperaturmodell",
+    "EDF", "Clamp pol loss", "Stuka pol förlust",
+    "EDG", "Ref pol loss", "Ref pol förlust",
+    "EDH", "Sugar loss (% of original)", "Socker förlust (% originell)",
+    "EDI", "Accumulated temperature (°Cd)", "Daggrader (°Cd)",
+    "EDJ", "Storage loss model", "Socker förlust modell",
     
-    "JAA","ECONOMY - CHARTS","EKONOMI - DIAGRAM",
-    "JDA","Base payment","Baspris",
-    "JDB","Bonus payment","Bonuspris",
-    "JDC","Total payment","Totalpris",
-    "JDD","Date","Datum",
-    "JDE","Price (kr/ha)","Pris (kr/ha)",
-    "JDF","INCOME PER HECTARE","INKOMST PER HEKTAR",
-    "JDG","Price (kr)","Pris (kr)",
-    "JDH","INCOME PER FIELD","INKOMST PER FÄLT",
-    "JDI","Price (kr/t)","Pris (kr/t)",
-    "JDJ","INCOME PER CLEAN (17%) TON","INKOMST PER TON RENBETOR (17%)",
-    "JDK","Price (kr/t)","Pris (kr/t)",
-    "JDL","INCOME PER DELIVERED (17%) TON","INKOMST PER TON LEVERERADBETOR (17%)",
     
-    "KAA","COMPARE","JÄMFÖRA"
+    "FAA", "DELIVERY", "LEVERANS",
+    "FAB", "DELIVERY", "LEVERANS",
+    "FAC", "Delivery date", "Leveransdatum",
+    "FAD", "Distance to deliver (mil)", "Distans av leverans (mil)",
+    "FAE", "Cost for delivery", "Leverans kostnad",
+    "FAF", "Delivery costs", "Leveranskostnader",
+    "FTA", "Field", "Fält",
+    "FTB", "Mil", "Mil",
+    "FTC", "Tonne", "Ton",
+    "FTD", "Tonnes per...", "Ton per ...",
+    "FTE", "Cost per ... (SEK)", "Kostnad per... (SEK)",
+    "FTF", "Cost per clean tonne (SEK)", "Kostnad per ton ren betor (SEK)",
+    "FTG", "Cost of soil transport (SEK)", "Kostnad jordtransport (SEK)",
+    
+    
+    "GAA", "PROD./ PAYMENT", "PROD./ BETALNING",
+    "GAB", "PRODUCTION", "PRODUKTION",
+    "GAC", "Date production data from:", "Datum produktion data från:",
+    "GAD", "Root yield (t/ha)", "Rotskörd (t/ha)",
+    "GAE", "Sugar content (%)", "Sockerhalt (%)",
+    "GAF", "Renhet (%)", "Renhet (%)",
+    "GAG", "Production summary", "Produktionsöversikt",
+    "GAH", "PAYMENT", "BETALNING",
+    "GAI", "Your contract price (SEK)", "Din kontrakt pris (SEK)",
+    "GAJ", "Eligible for volume bonus", "Volymbonus",
+    "GAK", "Payment", "Betalning",
+    "GTA", "Sugar yield (t/ha)", "Sockerskörd (t/ha)",
+    "GTB", "Pol (%)", "Pol (%)",
+    "GTC", "Root Yield (t/ha)", "Rotskörd (t/ha)",
+    "GTD", "Root Yield (t/field)", "Rotskörd (t/fält)",
+    "GTE", "Grown", "Växt",
+    "GTF", "Harvested", "Upptagen",
+    "GTG", "Delivery", "Levererad",
+    "GTH", "Hectare", "Hektar",
+    "GTI", "Field", "Fält",
+    "GTJ", "Tonne - delivered", "Ton - levererad",
+    "GTK", "Tonne - clean", "Ton - ren betor",
+    "GTL", "Base price", "Baspris",
+    "GTM", "Bonuses", "Bonus",
+    "GTN", "Total payment", "Total betalning",
+    
+    
+    "HAA", "SUMMARY TABLE", "SAMMANFATTNING - TAB",
+    "HAB", "Restrict data start date to harvest date", "Begränsa data startdatum till upptagningsdatum",
+    "HAC", "Restrict data end date to delivery date", "Begränsa data slutdatum till leveransdatum",
+    "HAD", "Show economy", "Visa ekonomi",
+    "HTA", "Date", " Datum",
+    "HTB", "Location", " Läge",
+    "HTC", "Temp. (°C)", " Temp. (°C)",
+    "HTD", "Cum. Temp (°Cd)", " Cum. Temp (°Cd)",
+    "HTE", "Cum. pol loss (%)", " Cum pol förlust (%)",
+    "HTF", "Pol", "Pol",
+    "HTG", "Root Yield", "Rotskörd",
+    "HTH", "Sugar Yield", "Sockerskörd",
+    "HTI", "Base price - clean tn", "Baspris per ton ren betor",
+    "HTJ", "Bonus - clean tn", "Bonus per ton ren betor",
+    "HTK", "Payment - clean tn", "Totall betalning per ton ren betor",
+    "HTL", "Base price - delivered tn", "Baspris per ton levererad",
+    "HTM", "Bonus - delivered tn", "Bonus per ton levererad",
+    "HTN", "Payment - delivered tn", "Totall betalning per ton levererad",
+    "HTO", "Base price - ha", "Baspris per ha",
+    "HTP", "Bonus - ha", "Bonus per ha",
+    "HTQ", "Payment - ha", " per ha",
+    "HTR", "Base price - field", "Baspris per fält",
+    "HTS", "Bonus - field", "Bonus per fält",
+    "HTT", "Payment - field", " per fält",
+    
+    
+    "IAA", "PRODUCTION - CHARTS", "PRODUCTION - DIAGRAM",
+    "IDA", "Cum. sug", "Cum. sug",
+    "IDB", "Sugar yield (t/ha)", "Sockerskörd (t/ha)",
+    "IDC", "Date", "Datum",
+    "IDD", "SUGAR YIELD", "SOCKERSKÖRD",
+    "IDE", "Pol", "Pol",
+    "IDF", "Cum. % loss", "Cum. % förlust",
+    "IDG", "Pol (%)", "Pol (%)",
+    "IDH", "Date", "Datum",
+    "IDI", "SUGAR CONTENT", "SOCKERHALT",
+    "IDJ", "Cum. mass", "Cum. massa",
+    "IDK", "Root yield (t/ha)", "Rotskörd (t/ha)",
+    "IDL", "Date", "Datum",
+    "IDM", "ROOT YIELD", "ROTSKÖRD",
+    "IDN", "Cum. temperature", "Cum. temperatur",
+    "IDO", "Degree days (°Cd)", "Daggrader(°Cd)",
+    "IDP", "Date", "Datum",
+    "IDQ", "CLAMP TEMPERATURE", "STUKATEMPERATUR",
+    
+    
+    "JAA", "ECONOMY - CHARTS", "EKONOMI - DIAGRAM",
+    "JDA", "Base payment", "Baspris",
+    "JDB", "Bonus payment", "Bonuspris",
+    "JDC", "Total payment", "Totalpris",
+    "JDD", "Date", "Datum",
+    "JDE", "Price (kr/ha)", "Pris (kr/ha)",
+    "JDF", "INCOME PER HECTARE", "INKOMST PER HEKTAR",
+    "JDG", "Price (kr)", "Pris (kr)",
+    "JDH", "INCOME PER FIELD", "INKOMST PER FÄLT",
+    "JDI", "Price (kr/t)", "Pris (kr/t)",
+    "JDJ", "INCOME PER CLEAN (17%) TON", "INKOMST PER TON RENBETOR (17%)",
+    "JDK", "Price (kr/t)", "Pris (kr/t)",
+    "JDL", "INCOME PER DELIVERED (17%) TON", "INKOMST PER TON LEVERERADBETOR (17%)",
+    
+    
+    "KAA", "COMPARE", "JÄMFÖRA",
+    "KAB", "COMPARE +", "JÄMFÖRA +",
+    "KDA", "Cum. sug", "Cum. sug",
+    "KDB", "Sugar yield (t/ha)", "Sockerskörd (t/ha)",
+    "KBC", "Date", "Datum",
+    "KDD", "SUGAR YIELD", "SOCKERSKÖRD",
+    
+    
+    
+    
+    "CHA", "IN THE FIELD", "I FÄLTET",
+    "CHB", "Strength values are used to guess the level of harvest damage that will occur.", "Styrka används för att gissa graden av skador vid upptagning.",
+    "CHC", "Variety Strength is currently a relative value, from 0 (weakest) to 100 (strongest).", "Sort stryka är för närvarande ett relativt värde från 0 (svagast) till 100 (starkast).",
+    "CHD", "Strength can be defined either on this scale, or by selecting the variety type.", "Styrka kan definieras antingen på denna skala eller genom att välja sort typ.",
+    "CHE", "Weaker varieties will have greater rates of damage.", "Svagare sorter kommer att få större skador.",
+    "CHF", "Sources: NBR Project 631 / COBRI trials and further literature", "Källor: NBR Projekt 631 / COBRI försök och andra källa.",
+    
+    "CHG", "LATE SEASON GROWTH POTENTIAL", "SENTILLVÄXTPOTENTIAL",
+    "CHH", "Late Season Growth Potential defines how much extra root yield will be added between early September and the end of November.", "Sen tillväxtpotential definierar hur mycket extra rotskörd som kommer att läggas till mellan början av september och slutet av november.",
+    "CHI", "It is defined as a daily percent increase in biomass.", "Det definieras som en daglig procentuell ökning av rotskörd.",
+    "CHJ", "Choosing a Late Season Growth Potential of 100% (default value) will give a total increase in root yield over this period of approximately 40%.", "Att välja en sen tillväxtpotential på 100% (standardvärde) ger en total ökning av rotskörd under denna period med cirka 40%.",
+    "CHK", "Late season growth potential is determined by issues like disease or water stress.", "Sen tillväxtpotential bestäms av frågor som sjukdom eller vattenspänning.",
+    "CHL", "Sugar content (pol) is estimated to increase by 0.02 percentage points per day until 30 Oct, and 0.01 between 1 and 15 Nov.", "Sockerhalten (pol) beräknas öka med 0,02 procentenheter per dag fram till 30 oktober, 0,01 mellan 1 och 15 november.",
+    "CHM", "All varieties should have the same late-season growth potential.", "Alla sorter bör ha samma sen tillväxtpotential.",
+    "CHN", "Source: NBR Project 417", "Källa: NBR Projekt 417",
+    
+    
+    "DHA", "HARVEST CONDITIONS", "FÖRHÅLLANDANDE VID SKÖRDE",
+    "DHB", "Harvest Conditions are used to guess the level of harvest damage that will occur.", "Skördeförhållanden används för att gissa graden av skördeskada som kommer att inträffa.",
+    "DHC", "Harder harvest conditions, a higher rotor speed, and weaker beet varieties (selected on the IN THE FIELD page) give higher damage.", "Svårare skördeförhållanden, högre rotorhastighet och svagare betesorter (valda på sidan I FÄLTEN) ger högre skada.",
+    "DHD", "Higher damage means higher loss during storage.", "Högre skada innebär högre förlust under lagring.",
+    "DHE", "The higher your damage score, the higher your rate of loss will be for each degree-day (shown on STORAGE tab).", "Ju högre din skada blir, desto högre blir din förlustnivå för varje daggrader (visas på fliken LAGRING).",
+    "DHF", "Sources: NBR Project ###.", "Källa: NBR Projekt ###",
+    "DHG", "Roots With Tip Breakage > 2cm is used to guess the harvest loss per ha.", "Rötter med spetsbrott > 2 cm används för att gissa skördeförlusten per ha.",
+    "DHH", "At the low end, 20% or less gives 1.3t/ha. At the high end, 100% or more gives 8.6t/ha.", "I den låga änden ger 20% eller mindre 1.3t/ha. I den höga änden ger 100% eller mer 8.6t/ha.",
+    "DHI", "To sample this, 20 representative beets should be measured in the clamp.", "För att prova detta bör 20 representativa betor mätas i stukan.",
+    "DHJ", "Sources: IIRB and industry experience", "Källor: IIRB och Industri erfarenhet",
+    
+    
+    "EHA", "CLAMP TEMPERATURE MODEL", "STUKATEMPERATURMODELL",
+    "EHB", "The Storage Temperature Model determine the clamp temperature in relation to the air temperature.", "Stukatemperaturmodellen bestämmer stukatemperaturen i förhållande till lufttemperaturen.",
+    "EHC", "The different years give historical mean air temperatures for Borgeby.", "De olika åren ger historiska genomsnittliga lufttemperaturer för Borgeby.",
+    "EHD", "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature.", "Stukabredd bestämmer en multiplikationsfaktor på stukatemperaturen i förhållande till lufttemperaturen.",
+    "EHE", "A wider clamp will build more heat than a thinner one.", "En bredare stuka kommer att bygga mer värme än en tunnare.",
+    "EHF", "At 7m, this multiplication factor is 1.00. At 9m, it is 1.10.", "Vid 7m är denna multiplikationsfaktor 1,00. Vid 9m är det 1,10.",
+    "EHG", "For models with a temperature floor - a minimum temperature the clamp can go to - Clamp Temperature Floor sets this.", "För modeller med temperaturgolv - en minsta temperatur som stukan kan gå till - Stukatemperaturgolv ställer detta.",
+    "EHH", "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", "Det datum stukan är täckt med TopTex används endast för att bestämma TopTex bonusen.",
+    "EHI", "Sources: just general observation...", "Källor: bara allmän observation ...",
+    
+    "EHJ", "STORAGE LOSS MODEL", "LAGRINGSFÖRLUSTMODELL",
+    "EHK", "The Loss Models are different ways of defining the relationship between storage loss and degree-days in the clamp.", "Lagringsförlustmodellerna är olika sätt att definiera sambandet mellan lagringsförlust och daggrader stukan.",
+    "EHL", "Degree Day is the sum of the green line in the above graph, for the period your beets are in storage.", "Daggrader är summan av den gröna linjen i grafen ovan, under den period dina betor lagras.",
+    "EHR", "Sugar loss", "Sockerförlust",
+    "EHM", "The higher your damage score, the higher your rate of sugar loss will be for each degree-day.", "Ju högre din skadaräkning är, desto högre blir din sockerförlust för varje daggrader.",
+    "EHN", "Your damage score is the sum of the Variety Strength (IN THE FIELD tab), and Harvest Conditions (HARVEST tab).", "Din skadaräkning är summan av Sort Stryka (I FÄLTET fliken),och skörd förhållande (UPPTAGNING fliken).",
+    "EHO", "You can see this relationship in the Storage Loss Model graph (right) - your storage loss (green line) relative to the median loss (blue dashed line).", "Du kan se detta förhållande i diagrammet Sockerförlustmodell (höger) - din lagringsförlust (grön linje) i förhållande till medianförlusten (blå streckad linje).",
+    "EHS", "Mass loss", "Massförlust",
+    "EHP", "Mass loss per degree-day is not a metric we have good information for, but we guess it's about 3% over long-term storage (300 degree-days).", "Massförlust per daggrader är inte ett mått vi har bra information om, men vi antar att det är cirka 3% över långtidslagring (300 daggrader).",
+    "EHQ", "Sources: Linear model - Jaggard et al. 1997. Discontinuous and Quadratics - Legrande and Wauters, 2012", "Källor: Linjär modell - Jaggard et al. 1997. Diskontinuerlig och kvadratisk - Legrande och Wauters, 2012",
+    
+    
+    "FHA", "DELIVERY", "LEVERANS",
+    "FHB", "Only the delivery date information is used elsewhere in this model.", "Endast information om leveransdatum används vidare i denna modell",
+    "FHC", "The delivery costs table is accurate, but I'm not sure it's useful information.", "Leveranskostnadstabellen är korrekt, men jag är inte säker på att det är användbar information.",
+    "FHD", "If you have thoughts on this, please contact me at we@nbrf.nu", "Om du har funderingar kring detta, vänligen kontakta mig på we@nbrf.nu",
+    
+    
+    "GHA", "PRODUCTION", "PRODUKTION",
+    "GHB", "The date for which this data is stated to apply to is that which all other calculations are made around.", "Det datum för vilket dessa uppgifter anges gälla är det som alla andra beräkningar görs runt.",
+    "GHC", "It is therefore important to get this right.", "Det är därför viktigt att få detta rätt.",
+    "GHD", "If using data from delivery, the date should be the same as the delivery date.", "Om du använder data från leveransen bör datumet vara samma som leveransdatumet.",
+    "GHE", "If using data to forecast management options, the date is most likely from when the beets are in the field.", "Om du använder data för att prognostisera hanteringsalternativ är datumet troligen från när betorna är i fältet.",
+    "GHF", "The 'Location: ...' text next to the date box tells you where the beets are when the production data applied to.", "Texten 'Location: ...' bredvid datumrutan berättar var betorna är när produktionsdata tillämpas på.",
+    "GHG", "If forecasting, use the Production summary table to the right to see if the yield and pol at delivery are in line with expectations.", "Om du gör prognoser använder du tabellen Produktionsöversikt till höger för att se om avkastningen och pol vid leverans överensstämmer med förväntningarna.",
+    
+    
+    "HHA", "PAYMENT", "BETALNING",
+    "HHB", "Please take this information from your contact and delivery data.", "Ta denna information från dina kontakt- och leveransdata.",
+    "HHC", "A Clean Tonne is one tonne of sugar beet (only), with pol = 17%.", "En ton ren betor är ett ton sockerbetor (endast),med pol = 17%.",
+    "HHD", "To adjust to a delivered tonne (a tonne in the truck):", "För att justera till ett levererat ton (ton i lastbilen):",
+    "HHE", "First adjust to 17%.", "Justera först till 17%.",
+    "HHF", "Add 0.9% of your base price per 0.1 percentage point above pol = 17%.", "Lägg till 0,9% av ditt baspris per 0,1 procentenhet över pol = 17%.",
+    "HHG", "If your beets are less than 17%, subtract 0.9% of your base price per 0.1 percentage point below pol = 17%.", "Om dina betor är mindre än 17%,subtrahera 0,9% av ditt baspris per 0,1 procentenhet under pol = 17%.",
+    "HHH", "Then convert to a 'dirty' tonne by multiplying by your measured dirt-tare.", "Omvandla sedan till ett 'smutsigt' ton genom att multiplicera med din uppmätta renhet.",
+    "HHI", "Bonuses include TopTex bonus, early/late delivery bonus, volume bonus, and dirt-tare bonus/penalty.", "Bonusar inkluderar TopTex-bonus, tidig/sen leveransbonus, volymbonus och renhetsbonus/straff.",
+    "HHJ", "The TopTex bonus is 5/10/15 SEK per clean tonne when TopTex is used for at least 7 days prior a delivery after 15Nov/1 Dec/15 Dec.", "TopTex bonusen är 5/10/15 SEK per ton ren betor när TopTex används minst 7 dagar före leverans efter 15 nov/1 dec/15 dec.",
+    "HHK", "Late delivery bonus is 1 SEK per clean tonne per day through December, and 1.5 SEK per clean tonne per day from 1 January.", "Sen leveransbonus är 1 kr per ton ren betor per dag till och med december och 1,5 kr per ton ren betor per dag från den 1 januari.",
+    "HHL", "The volume bonus is 5 SEK (0.5 EUR) per clean tonne if you have increased your area grown under sugar beet by 10% since 2019.", "Volymbonusen är 5 SEK (0,5 EUR) per ton ren betor om du har ökat ditt areal som odlats under sockerbetor med 10% sedan 2019.",
+    "HHM", "Dirt-tare bonus/ penalty is 2 SEK per clean tonne per percentage point below/above 10.5% dirt-tare.", "Renhetsbonus/ straff är 2 SEK per ton ren betor per procentenhet under/ över 89, 5% renhet.",
+    "HHN", "Please note that there is no modelling of dirt-tare in this model - this is assumed constant over the entire growth and storage period", "Observera att det inte finns någon modellering av renhet i denna modell - detta antas konstant under hela tillväxt- och lagringsperioden"
   ), byrow = T, ncol=3) 
   colnames(language_tab)<- c("REF","EN","SV")
   language_tab <- data.frame(language_tab)
@@ -254,6 +383,10 @@ values <- reactiveValues()
     eval(parse(text=paste0("values$",lang_row," <- language_tab[which(language_tab$REF == '",lang_row,"'),lang_col]")))
   }
 }
+
+values$root_harvest_1_y_lim <- 16.5
+values$root_harvest_2_y_lim <- 16.5
+values$root_harvest_y_lim <- 16.5
 
 ###############################################
 #
@@ -330,56 +463,55 @@ ui <- fluidPage(
                column(12, selectInput("lang_col","Language", choices = list("Svenska"=3,"English"=2)))
              ),
              fluidRow(
-               column(12,h4("WARNINGS / DISCLAIMER"),
-                      "You should not use this model to make management decisions on your farm.",
-                      "It's purpose is to help explore the factors that drive successful harvest and storage strategies.",
-                      "The model is general and may not be suitable to apply to your own production system.",
+               column(12,h4(isolate(values$BAB)),
+                      isolate(values$BAC),
+                      isolate(values$BAD),
+                      isolate(values$BAE),
                       br(),br(),
-                      "This model is not able to refelct that variability in the production system that occur from day to day in reality.",
-                      "It similarly is not able to reflect your willingness to accept these production risks.",
+                      isolate(values$BAF),
+                      isolate(values$BAG),
                       br(), br(),
-                      "The 2021 price model for Sweden is applied. Prices are assumed fixed in SEK.",
+                      isolate(values$BAH),
                       br(), br()
                )
              ),
              fluidRow(
-               column(12, h4("INSTRUCTIONS"),
-                      "Basically, just work through the tabs.",
-                      "The default values set are those that approximately reflect the industry averages.",
-                      "If you are unsure what is an appropriate value, either take the default, or set the value to an extreme value and see what happens.",
+               column(12, h4(isolate(values$BAI)),
+                      isolate(values$BAJ),
+                      isolate(values$BAK),
+                      isolate(values$BAL),
                       br(),br(),
-                      "While a model can give an indication for what might happen, one of the best uses for them is think about all the things that the model doesn't capture.",
-                      "Similarly, when you can see the modelled outcome is different to the actual outcome, this is the time to ask 'why?' and hopefully find some real insight.",
+                      isolate(values$BAM),
+                      isolate(values$BAN),
                       br(),br(),
-                      "Please note that the cost information in the Delivery tab is not well developed.",
+                      isolate(values$BAO),
                       br(),br()
                )
              ),
              fluidRow(
-               column(12, h4("DEFINITIONS"),
-                      "Clean (mass): The beet mass that is deemed processible.", 
-                      "The term on which root yield is commonly defined.", 
-                      "The mass is independent of sugar concentration.",
-                      "Equals the weight of delivered beet x (1 - dirt-tare).",
+               column(12, h4(isolate(values$BAP)),
+                      isolate(values$BAQ),
+                      isolate(values$BAR),
+                      isolate(values$BAS),
+                      isolate(values$BAT),
                       br(),br(),
-                      "Clean (prices): The price per tonne of clean beet mass, are adjusted to be for a pol of 17%.",
-                      "The term on which prices are set.",
-                      "The price is adjusted 9% per percentage point change in pol from the base of 17%.",
-                      "The conversion to 17% is linear in the change in price per change in pol percentage point.",
-                      "This means that the increase/ decrease in price is greater at lower sugar concentrations.",
-                      "The contract price is for a pol of 17%.",
-                      "If your pol is higher than this, then the prices per tonne clean given in this model will be higher than your contract price.",
+                      isolate(values$BAU),
+                      isolate(values$BAV),
+                      isolate(values$BAW),
+                      isolate(values$BAX),
+                      isolate(values$BAY),
+                      isolate(values$BAZ),
+                      isolate(values$BBA),
                       br(),br(),
-                      "Delivered: The mass of beet that falls out of the back of the truck at Örtofta.",
-                      "A large fraction of the mass is soil and unprocessible beet material (dirt tare).",
-                      "Is independent of sugar concentration.",
+                      isolate(values$BBB),
+                      isolate(values$BBC),
+                      isolate(values$BBD),
                       br(), br() 
                )
              ),
              fluidRow(
                column(12, h4("IMPROVEMENTS"),
                       "The following improvements are on the to-do list:", br(),
-                      "- Introduce a tab in which scenarios can be compared", br(),
                       "- Allow the price schedule to change to reflect those of recent years.",br(),
                       "- Have a 'simplified version' tab, in which some outputs are just set to defaults and some outputs disappear.",br(),
                       "- Introduce a model of dirt-tare. This would probably be something like an industry average, with spikes after rainfall events.", br(),
@@ -507,11 +639,11 @@ ui <- fluidPage(
                      column(2, actionButton("help_production", "?"))
                    ),
                    fluidRow(
-                     column(6,dateInput("prod_data_date",isolate(values$GAC),value = "2022-01-15")),
+                     column(6,dateInput("prod_data_date",isolate(values$GAC),value = "2021-09-15")),
                      column(6,textOutput("prod_data_loc"),style = "margin-top: 30px")
                    ),
-                   sliderInput("root_yield",isolate(values$GAD), min=40, max=120, step = 1, value = 86),
-                   sliderInput("pol", isolate(values$GAE), min=15, max=22, value=17, step = 0.1),
+                   sliderInput("root_yield",isolate(values$GAD), min=40, max=120, step = 1, value = 60),
+                   sliderInput("pol", isolate(values$GAE), min=15, max=22, value=16, step = 0.1),
                    sliderInput("renhet", isolate(values$GAF), min=78, max=100, value=89.5, step = 0.1)
                  ),
                  mainPanel(
@@ -577,14 +709,20 @@ ui <- fluidPage(
     tabPanel(isolate(values$KAA), 
              fluid = T, style = "padding-top:5px",
              fluidRow(
-               column(6, actionButton("comp_1", "Compare the current set-up")),
-               column(6, actionButton("comp_2", "Compare the current set-up"))
+               column(6, actionButton("comp_1", isolate(values$KAB))),
+               column(6, actionButton("comp_2", isolate(values$KAB)))
              ),
              fluidRow(
-               column(6,tableOutput("comp_1_tab"),
-                      plotly::plotlyOutput("summary_graph_sug_comp_1")),
-               column(6,tableOutput("comp_2_tab"),
-                      plotly::plotlyOutput("summary_graph_sug_comp_2"))
+               column(6,br(),
+                      tableOutput("comp_1_prod_tab"),
+                      plotly::plotlyOutput("summary_graph_sug_comp_1"),
+                      br(),
+                      tableOutput("comp_1_tab")),
+               column(6,br(),
+                      tableOutput("comp_2_prod_tab"),
+                      plotly::plotlyOutput("summary_graph_sug_comp_2"),
+                      br(),
+                      tableOutput("comp_2_tab"))
              )
     )
   )
@@ -1076,7 +1214,7 @@ server <- function(input, output, session){
   # Summary outputs table
   output$summary_final_tab = renderTable({
     summary_final_tab()
-  },rownames = T, digits=0)
+  },rownames = T, digits=0, align = "r")
   
   ## CHARTS ##
   
@@ -1279,13 +1417,13 @@ server <- function(input, output, session){
   
   observeEvent(input$help_variety_strength, {
     showModal(modalDialog(
-      title = "In the field",
-      "Strength values are used to guess the level of harvest damage that will occur.", 
-      "Variety Strength is currently a relative value, from 0 (weakest) to 100 (strongest).",
-      "Strength can be defined either on this scale, or by selecting the variety type.",
-      "Weaker varieties will have greater rates of damage.",
+      title = values$CHA,
+      values$CHB,
+      values$CHC,
+      values$CHD,
+      values$CHE,
       br(),br(), 
-      "Sources: NBR Project 631 / COBRI trials and further literature",
+      values$CHF,
       easyClose = T,
       footer = NULL
     ))
@@ -1293,17 +1431,17 @@ server <- function(input, output, session){
   
   observeEvent(input$help_LSG, {
     showModal(modalDialog(
-      title = "LATE SEASON GROWTH POTENTIAL",
-      "Late Season Growth Potential defines how much extra root yield will be added between early September and the end of November.",
-      "It is defined as a daily percent increase in biomass.",
-      "Choosing a Late Season Growth Potential of 100% (default value) will give a total increase in root yield over this period of approximately 40%.",
-      "Late season growth potential is determined by issues like disease or water stress.",
+      title = values$CHG,
+      values$CHH,
+      values$CHI,
+      values$CHJ,
+      values$CHK,
       br(),br(),
-      "Sugar content (pol) is estimated to increase by 0.02 percentage points per day.",
+      values$CHL,
       br(),br(),
-      "All varieties should have the same late-season growth potential.", 
+      values$CHM, 
       br(), br(),
-      "Sources: NBR Project 417",
+      values$CHN,
       easyClose = T,
       footer = NULL
     ))
@@ -1311,19 +1449,19 @@ server <- function(input, output, session){
   
   observeEvent(input$help_harvest_conditions, {
     showModal(modalDialog(
-      title = "HARVEST CONDITIONS",
-      "Harvest Conditions are used to guess the level of harvest damage that will occur.",
-      "Harder harvest conditions, a higher roter speed, and weaker beet varieties (selected on the IN THE FIELD page) give higher damage.",
-      "Higher damage means higher loss during storage.", 
-      "The higher your damage score, the higher your rate of loss will be for each degree-day (shown on STORAGE tab).",
+      title = values$DHA,
+      values$DHB,
+      values$DHC,
+      values$DHD, 
+      values$DHE,
       br(), 
-      "Sources: NBR Project ###.",
+      values$DHF,
       br(),br(),
-      "Roots With Tip Breakage > 2cm is used to guess the harvest loss per ha.",
-      "At the low end, 20% or less gives 0.5t/ha. At the high end, 80% or more gives 4t/ha.",
-      "To sample this, 20 representative beets should be measured in the clamp.",
+      values$DHG,
+      values$DHH,
+      values$DHI,
       br(),
-      "Source: IIRB",
+      values$DHJ,
       easyClose = T,
       footer = NULL
     ))
@@ -1331,20 +1469,20 @@ server <- function(input, output, session){
   
   observeEvent(input$help_storage_temp, {
     showModal(modalDialog(
-      title = "STORAGE TEMPERATURE MODEL",
-      "The Storage Temperature Model determine the clamp temperature in relation to the air temperature.", 
+      title = values$EHA,
+      values$EHB, 
       br(), br(),
-      "The different years give historical mean air temperatures for Borgeby.",
+      values$EHC,
       br(), br(),
-      "Clamp width determines a multiplication factor on the clamp temperature relative to the air temperature.",
-      "A wider clamp will build more heat than a thinner one.", 
-      "At 7m, this multiplication factor is 1.00. At 9m, it is 1.10",
+      values$EHD,
+      values$EHE, 
+      values$EHF,
       br(), br(),
-      "For models with a temperature floor - a minimum temperature the clamp can go to - Clamp Temperature Floor sets this.",
+      values$EHG,
       br(), br(),
-      "The date the clamp is covered with TopTex is only used to determine the TopTex bonus.", 
+      values$EHH, 
       br(), br(),
-      "Sources: just general observation...",
+      values$EHI,
       easyClose = T,
       footer = NULL
     ))
@@ -1352,17 +1490,21 @@ server <- function(input, output, session){
   
   observeEvent(input$help_storage_loss, {
     showModal(modalDialog(
-      title = "STORAGE LOSS MODEL",
-      "The Loss Models are different ways of defining the relationship between storage loss and degree-days.",
-      "Degree Day is the sum of the red line in the above graph, for the period your beets are in storage.",
+      title = values$EHJ,
+      values$EHK,
+      values$EHL,
       br(), br(),
-      "The higher your damage score, the higher your rate of sugar loss will be for each degree-day.",
-      "Your damage score is the sum of the Variety Strength (In the Field tab), and Harvest Conditions (Harvest tab).",
-      "You can see this relationship in the Storage Loss Model graph (right) - your storage loss (red line) relative to the median loss (blue dashed line).", 
+      values$EHR,
+      br(),
+      values$EHM,
+      values$EHN,
+      values$EHO, 
       br(), br(),
-      "Mass loss per degree-day is not a metric we have good information for, but we guess it's about 3% over long-term storage (300 degree-days).",
+      values$EHS,
+      br(),
+      values$EHP,
       br(), br(),
-      "Sources: Linear model - Jaggard et al. 1997. Discontinuous and Quadratics - Legrande and Wauters, 2012",
+      values$EHQ,
       easyClose = T,
       footer = NULL
     ))
@@ -1370,11 +1512,11 @@ server <- function(input, output, session){
   
   observeEvent(input$help_delivery, {
     showModal(modalDialog(
-      title = "DELIVERY",
-      "Only the delivery date information is used elsewhere in this model",
+      title = values$FHA,
+      values$FHB,
       br(),br(),
-      "The delivery costs table is accurate, but I'm not sure it's useful information.",
-      "If you have thoughts on this, please contact me at we@nbrf.nu",
+      values$FHC,
+      values$FHD,
       easyClose = T,
       footer = NULL
     ))
@@ -1382,14 +1524,14 @@ server <- function(input, output, session){
   
   observeEvent(input$help_production, {
     showModal(modalDialog(
-      title = "PRODUCTION",
-      "The date for which this data is stated to apply to is that which all other calculations are made around.",
-      "It is therefore important to get this right.",
+      title = values$GHA,
+      values$GHB,
+      values$GHC,
       br(),br(),
-      "If using data from delivery, the date should be the same as the delivery date.",
-      "If using data to forecast management options, the date is most likely from when the beets are in the field.",
-      "The 'Location: ...' text next to the date box tells you where the beets are when the production data applied to.",
-      "If forecasting, use the Production summary table to the right to see if the yield and pol at delivery are in line with expectations.",
+      values$GHD,
+      values$GHE,
+      values$GHF,
+      values$GHG,
       br(),br(),
       easyClose = T,
       footer = NULL
@@ -1398,23 +1540,22 @@ server <- function(input, output, session){
   
   observeEvent(input$help_payment, {
     showModal(modalDialog(
-      title = "PAYMENT",
-      "Please take this information from your contact and delivery data.",
+      title = values$HHA,
+      values$HHB,
+      values$HHC,
+      values$HHD, 
+      br(), values$HHE, 
+      values$HHF,
+      values$HHG,
+      br(), values$HHH,
       br(),br(),
-      "A Clean Tonne is one tonne of sugar beet (only), with pol = 17%.",
-      "To adjust to a delivered tonne (a tonne in the truck):", 
-      br(), "First adjust to 17%.", 
-      "Add 0.9% of your base price per 0.1 percentage point above pol = 17%.",
-      "If your beets are less than 17%, subtract 0.9% of your base price per 0.1 percentage point below pol = 17%.",
-      br(), "Then convert to a 'dirty' tonne by multiplying by your measured dirt-tare.",
+      values$HHI,
+      values$HHJ,
+      values$HHK,
+      values$HHL,
+      values$HHM,
       br(),br(),
-      "Bonuses include TopTex bonus, early/late delivery bonus, volume bonus, and dirt-tare bonus/penalty.",
-      "The TopTex bonus is 5/10/15 SEK per clean tonne when TopTex is used for at least 7 days prior a delivery after 15Nov/1 Dec/15 Dec.",
-      "Late delivery bonus is 1 SEK per clean tonne per day through December, and 1.5 SEK per clean tonne per day from 1 January.",
-      "The volume bonus is 5 SEK (0.5 EUR) per clean tonne if you have increased your area grown under sugar beet by 10% since 2019.",
-      "Dirt-tare bonus/ penalty is 2 SEK per clean tonne per percentage point below/above 10.5% dirt-tare.",
-      br(),br(),
-      "Please note that there is no modelling of dirt-tare in this model - this is assumed constant over the entire growth and storage period",
+      values$HHN,
       easyClose = T,
       footer = NULL
     ))
@@ -1431,23 +1572,33 @@ server <- function(input, output, session){
   comp_1_tab_graph <- eventReactive(input$comp_1,{
     summary_tab()
   })
+  comp_1_prod_tab <- eventReactive(input$comp_1,{
+    root_harvest_tab_i <- root_harvest_tab()
+    values$root_harvest_1_y_lim <- root_harvest_tab_i[1,1]
+    values$root_harvest_y_lim <- max(c(values$root_harvest_1_y_lim, values$root_harvest_2_y_lim))
+    root_harvest_tab_i
+  })
   
   output$comp_1_tab = renderTable({
     comp_1_tab()
+  }, rownames = T, digits = 0, align = "r")
+  output$comp_1_prod_tab = renderTable({
+    comp_1_prod_tab()
   }, rownames = T)
   
   output$summary_graph_sug_comp_1 <- plotly::renderPlotly({
     ggplot(comp_1_tab_graph(), aes(x=date_full)) + 
-      geom_line(aes(y=sug_cum, color = "Cum. sug")) +
+      geom_line(aes(y=sug_cum, color = values$KDA)) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Cum. sug"),
+                          breaks = c(values$KDA),
                           values = c("Cum. sug"="red3")) +
-      ylab("Sugar yield (t/ha)") + 
-      xlab("Date") +
-      labs(title = "SUGAR YIELD") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      ylab(values$KDB) + 
+      xlab(values$KDC) +
+      labs(title = values$KDD) +
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom") + 
+      ylim(10,values$root_harvest_y_lim)
   })
   
   comp_2_tab <- eventReactive(input$comp_2,{
@@ -1456,23 +1607,33 @@ server <- function(input, output, session){
   comp_2_tab_graph <- eventReactive(input$comp_2,{
     summary_tab()
   })
+  comp_2_prod_tab <- eventReactive(input$comp_2,{
+    root_harvest_tab_i <- root_harvest_tab()
+    values$root_harvest_2_y_lim <- root_harvest_tab_i[1,1]
+    values$root_harvest_y_lim <- max(c(values$root_harvest_1_y_lim, values$root_harvest_2_y_lim))
+    root_harvest_tab_i
+  })
   
   output$comp_2_tab = renderTable({
     comp_2_tab()
+  }, rownames = T, digits = 0, align = "r")
+  output$comp_2_prod_tab = renderTable({
+    comp_2_prod_tab()
   }, rownames = T)
   
   output$summary_graph_sug_comp_2 <- plotly::renderPlotly({
     ggplot(comp_2_tab_graph(), aes(x=date_full)) + 
-      geom_line(aes(y=sug_cum, color = "Cum. sug")) +
+      geom_line(aes(y=sug_cum, color = values$KDA)) +
       geom_vline(xintercept = as.numeric(delivery_date), linetype="dotted") +
       geom_vline(xintercept = as.numeric(harvest_date), linetype="dotted") +
       scale_colour_manual("", 
-                          breaks = c("Cum. sug"),
+                          breaks = c(values$KDA),
                           values = c("Cum. sug"="red3")) +
-      ylab("Sugar yield (t/ha)") + 
-      xlab("Date") +
-      labs(title = "SUGAR YIELD") +
-      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom")
+      ylab(values$KDB) + 
+      xlab(values$KDC) +
+      labs(title = values$KDD) +
+      theme(plot.title = element_text(size=15, face="bold.italic"), legend.position="bottom") + 
+      ylim(10,values$root_harvest_y_lim)
   })
   
 }
